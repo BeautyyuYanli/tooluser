@@ -2,6 +2,9 @@
 
 For some models/providers that doesn't natively support function calling (e.g. DeepSeek V3/R1), you can use this library to transform the tool calls to a user prompt, in Hermes template format by default.
 
+```
+pip install tooluser
+```
 ```python
 from openai import AsyncOpenAI
 from tooluser import make_tool_user
