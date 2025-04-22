@@ -1,7 +1,7 @@
 [project]
 name = "tooluser"
 version = "0.1.0"
-description = "Enable tool-use ability for any LLM model"
+description = "Enable tool-use ability for any LLM model (DeepSeek V3/R1, etc.)"
 authors = [
     {name = "yanli", email = "mail@yanli.one"},
 ]
@@ -45,4 +45,5 @@ ignore = [
 [dependency-groups]
 dev = [
     "ruff>=0.11.6",
+    "logfire>=3.14.0",
 ]

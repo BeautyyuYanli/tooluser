@@ -3,8 +3,8 @@ import re
 import uuid
 from typing import Callable, Iterable, List
 
-from json_repair import repair_json
 from jinja2 import Template
+from json_repair import repair_json
 from openai.types.chat import (
     ChatCompletionMessage,
     ChatCompletionMessageParam,
@@ -86,7 +86,9 @@ def tool_call_parse_parama(text: str) -> ChatCompletionMessageToolCallParam:
 def tool_call_serialize(tool_call: ChatCompletionMessageToolCallParam):
     # Parse the arguments string back into a dictionary
     try:
-        arguments: dict | str = repair_json(tool_call["function"]["arguments"], return_objects=True)  # type: ignore
+        arguments: dict | str = repair_json(
+            tool_call["function"]["arguments"], return_objects=True
+        )  # type: ignore
     except Exception as e:
         arguments = tool_call["function"]["arguments"]
         raise ValueError("Invalid tool call format - must be valid JSON") from e
