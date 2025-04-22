@@ -3,7 +3,7 @@ import re
 import uuid
 from typing import Callable, Iterable, List
 
-import yaml
+from json_repair import repair_json
 from jinja2 import Template
 from openai.types.chat import (
     ChatCompletionMessage,
@@ -55,10 +55,13 @@ def tool_call_parse(text: str):
     if tool_call_match:
         text = tool_call_match.group(1).strip()
 
+    # Parse the JSON-formatted tool call
     try:
-        # Parse the JSON-formatted tool call
-        tool_call_data = yaml.safe_load(text)
+        tool_call_data: dict = repair_json(text, return_objects=True)  # type: ignore
+    except Exception as e:
+        raise ValueError("Invalid tool call format - must be valid JSON") from e
 
+    try:
         # Create a Function object
         function = Function(
             name=tool_call_data["name"],
@@ -71,8 +74,6 @@ def tool_call_parse(text: str):
             function=function,
             type="function",
         )
-    except yaml.YAMLError:
-        raise ValueError("Invalid tool call format - must be valid YAML") from None
     except KeyError as e:
         raise ValueError("Invalid tool call format - missing required fields") from e
 
@@ -85,9 +86,10 @@ def tool_call_parse_parama(text: str) -> ChatCompletionMessageToolCallParam:
 def tool_call_serialize(tool_call: ChatCompletionMessageToolCallParam):
     # Parse the arguments string back into a dictionary
     try:
-        arguments = yaml.safe_load(tool_call["function"]["arguments"])
-    except yaml.YAMLError:
+        arguments: dict | str = repair_json(tool_call["function"]["arguments"], return_objects=True)  # type: ignore
+    except Exception as e:
         arguments = tool_call["function"]["arguments"]
+        raise ValueError("Invalid tool call format - must be valid JSON") from e
 
     # Create the JSON structure as specified in tools_list_prompt
     tool_call_data = {
