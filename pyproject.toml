@@ -1,6 +1,6 @@
 [project]
 name = "tooluser"
-version = "0.1.0"
+version = "0.1.1"
 description = "Enable tool-use ability for any LLM model (DeepSeek V3/R1, etc.)"
 authors = [
     {name = "yanli", email = "mail@yanli.one"},
