@@ -22,10 +22,9 @@ def make_tool_user(client: AsyncOpenAI, transformation: Transformation | None = 
         async def create(self, *args, **kwargs) -> ChatCompletion:  # type: ignore
             messages = kwargs.get("messages", [])
             tools = kwargs.pop("tools", [])
-            tool_choice = kwargs.pop("tool_choice", "auto")
             if kwargs.pop("stream", False):
                 raise ValueError("Stream is not supported for tool_user")
-            if (tool_choice in ["auto", "required"] or tool_choice is None) and tools:
+            if tools:
                 kwargs["messages"] = transformation.trans_param_messages(
                     messages, tools
                 )
