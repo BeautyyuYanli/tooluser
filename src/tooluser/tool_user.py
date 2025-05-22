@@ -22,17 +22,20 @@ def make_tool_user(client: AsyncOpenAI, transformation: Transformation | None = 
         async def create(self, *args, **kwargs) -> ChatCompletion:  # type: ignore
             messages = kwargs.get("messages", [])
             tools = kwargs.pop("tools", [])
-            if kwargs.pop("stream", False):
-                raise ValueError("Stream is not supported for tool_user")
+            stream = kwargs.pop("stream", False)
             if tools:
                 kwargs["messages"] = transformation.trans_param_messages(
                     messages, tools
                 )
-
-            response: ChatCompletion = await super().create(*args, **kwargs)
-            for choice in response.choices:
-                choice.message = transformation.trans_completion_message(choice.message)
-            return response
+            if not stream:
+                response: ChatCompletion = await super().create(*args, **kwargs)
+                for choice in response.choices:
+                    choice.message = transformation.trans_completion_message(
+                        choice.message
+                    )
+                return response
+            elif kwargs.get("n", 1) > 1:
+                raise ValueError("Stream is not supported for tool_user with n > 1")
 
     client.chat.completions = ProxyAsyncCompletions(client=client)  # type: ignore
     return client

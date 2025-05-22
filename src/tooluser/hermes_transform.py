@@ -1,11 +1,12 @@
 import json
 import re
 import uuid
-from typing import Callable, Iterable, List, Union
-from queue import Queue
+from typing import AsyncIterable, Iterable, List, Union
+
 from jinja2 import Template
 from json_repair import repair_json
 from openai.types.chat import (
+    ChatCompletionChunk,
     ChatCompletionMessage,
     ChatCompletionMessageParam,
     ChatCompletionMessageToolCall,
@@ -129,59 +130,73 @@ def tool_result_parse(text: str) -> ChatCompletionToolMessageParam:
     }
 
 
-OutputType = Union[str, ChatCompletionMessageToolCall, None]
+OutputType = Union[str, ChatCompletionMessageToolCall]
 
-def stream_process(
-    text_stream: Iterable[str],
-    start_tag: str,
-    end_tag: str,
-)->Iterable[OutputType]:
-    BUFFER_SIZE = len(start_tag)
 
-    buffer = ""
-    in_tool_call = False
+async def _async_iterable_from_list(items: Iterable[str]) -> AsyncIterable[str]:
+    for item in items:
+        yield item
 
-    for chunk in text_stream:
-        buffer += chunk
 
-        # Keep processing while we can find complete tool calls
+class StreamProcessor:
+    """Processes a stream of text, yielding tool calls and other content."""
+
+    start_tag: str
+    end_tag: str
+    buffer_size: int
+    buffer: str
+    in_tool_call: bool
+
+    def __init__(self, start_tag: str, end_tag: str):
+        self.start_tag = start_tag
+        self.end_tag = end_tag
+        self.buffer_size = len(start_tag)
+        self.buffer = ""
+        self.in_tool_call = False
+
+    def process(self, chunk: str) -> list[OutputType]:
+        self.buffer += chunk
+        outputs = []
         while True:
-            if not in_tool_call:
-                # Look for the start of a tool call
-                start_idx = buffer.find(start_tag)
+            if not self.in_tool_call:
+                start_idx = self.buffer.find(self.start_tag)
                 if start_idx == -1:
                     # No tool call start found, yield everything up to the last BUFFER_SIZE characters
-                    if len(buffer) > BUFFER_SIZE:
-                        yield buffer[:-BUFFER_SIZE]
-                        buffer = buffer[-BUFFER_SIZE:]
-                    break
-
-                # Found start of tool call
-                if start_idx > 0:
-                    yield buffer[:start_idx]
-                buffer = buffer[start_idx:]
-                in_tool_call = True
-
+                    if len(self.buffer) > self.buffer_size:
+                        output = self.buffer[: -self.buffer_size]
+                        self.buffer = self.buffer[-self.buffer_size :]
+                        outputs.append(output)
+                        continue
+                    else:
+                        break
+                else:
+                    # Found start of tool call
+                    output = self.buffer[:start_idx]
+                    self.buffer = self.buffer[start_idx:]
+                    self.in_tool_call = True
+                    outputs.append(output)
+                    continue
             else:
-                # Look for the end of the tool call
-                end_idx = buffer.find(end_tag)
+                # In tool call
+                end_idx = self.buffer.find(self.end_tag)
                 if end_idx == -1:
                     break
+                else:
+                    output = self.buffer[: end_idx + len(self.end_tag)]
+                    self.buffer = self.buffer[end_idx + len(self.end_tag) :]
+                    self.in_tool_call = False
+                    outputs.append(tool_call_parse(output))
+                    continue
+        return outputs
 
-                # Found complete tool call
-                end_idx += len(end_tag)
-                yield tool_call_parse(buffer[:end_idx])
-                buffer = buffer[end_idx:]
-                in_tool_call = False
-
-    # Yield any remaining content
-    if buffer:
-        yield buffer
-    yield None
-
-
-def stream_process_tool_call(text_stream: Iterable[str]):
-    return stream_process(text_stream, "<tool_call>", "</tool_call>")
+    def finalize(self) -> OutputType:
+        if self.in_tool_call:
+            try:
+                return tool_call_parse(self.buffer)
+            except Exception:
+                return self.buffer
+        else:
+            return self.buffer
 
 
 class HermesTransformation(Transformation):
@@ -238,10 +253,11 @@ class HermesTransformation(Transformation):
         if completion.content is not None:
             tool_calls: List[ChatCompletionMessageToolCall] = []
             output_content = ""
-            for output in stream_process_tool_call([completion.content]):
-                if output is None:
-                    break
-                elif isinstance(output, ChatCompletionMessageToolCall):
+            processor = StreamProcessor("<tool_call>", "</tool_call>")
+            outputs = processor.process(completion.content)
+            outputs.append(processor.finalize())
+            for output in outputs:
+                if isinstance(output, ChatCompletionMessageToolCall):
                     tool_calls.append(output)
                 else:
                     output_content += output
@@ -249,3 +265,9 @@ class HermesTransformation(Transformation):
             if tool_calls:
                 completion.tool_calls = tool_calls
         return completion
+
+    def trans_completion_message_stream(
+        self,
+        completion: AsyncIterable[ChatCompletionChunk],
+    ) -> AsyncIterable[ChatCompletionChunk]:
+        pass
