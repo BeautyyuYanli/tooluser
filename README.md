@@ -37,6 +37,14 @@ res = await oai.chat.completions.create(
 
 Check out the [example.py](example.py) for a runnable example.
 
+## Streaming Support
+
+Yes, this library also supports streaming.
+
+Check out the [example_stream.py](example_stream.py) for a runnable example.
+
+(LLM output for tool using is not streamed, because we use json-repair for it.)
+
 ## What's Hermes template?
 
 Function calling is implicitly a prompt template, to make the model understand how to output the structured response as we want. Hermes template is a widely adopted prompt template for function calling.
