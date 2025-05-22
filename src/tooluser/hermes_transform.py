@@ -1,11 +1,12 @@
 import json
 import re
 import uuid
-from typing import Callable, Iterable, List
+from typing import AsyncIterable, Callable, Iterable, List
 
 from jinja2 import Template
 from json_repair import repair_json
 from openai.types.chat import (
+    ChatCompletionChunk,
     ChatCompletionMessage,
     ChatCompletionMessageParam,
     ChatCompletionMessageToolCall,
@@ -247,3 +248,34 @@ class HermesTransformation(Transformation):
             if tool_calls:
                 completion.tool_calls = tool_calls
         return completion
+
+    async def trans_stream_param_messages(
+        self,
+        messages: AsyncIterable[ChatCompletionMessageParam],
+        tools: Iterable[FunctionDefinition],
+    ) -> AsyncIterable[ChatCompletionMessageParam]:
+        collected_messages: List[ChatCompletionMessageParam] = []
+        async for message in messages:
+            collected_messages.append(message)
+
+        transformed_messages = self.trans_param_messages(collected_messages, tools)
+        for transformed_message in transformed_messages:
+            yield transformed_message
+
+    def trans_stream_completion_message(
+        self,
+        chunk: ChatCompletionChunk,
+    ) -> ChatCompletionChunk:
+        if chunk.choices and chunk.choices[0].delta:
+            choice = chunk.choices[0]
+            if choice.delta and choice.delta.tool_calls:
+                # Append placeholder to content
+                placeholder = " [hermes_tool_calls_conversion_placeholder] "
+                if choice.delta.content is None:
+                    choice.delta.content = placeholder
+                else:
+                    choice.delta.content += placeholder
+                
+                # Clear tool_calls as they are now represented in content
+                choice.delta.tool_calls = None
+        return chunk

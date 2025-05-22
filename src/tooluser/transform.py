@@ -1,6 +1,7 @@
-from typing import Iterable, Protocol
+from typing import AsyncIterable, Iterable, Protocol
 
 from openai.types.chat import (
+    ChatCompletionChunk,
     ChatCompletionMessage,
     ChatCompletionMessageParam,
 )
@@ -18,3 +19,14 @@ class Transformation(Protocol):
         self,
         completion: ChatCompletionMessage,
     ) -> ChatCompletionMessage: ...
+
+    def trans_stream_param_messages(
+        self,
+        messages: AsyncIterable[ChatCompletionMessageParam],
+        tools: Iterable[FunctionDefinition],
+    ) -> AsyncIterable[ChatCompletionMessageParam]: ...
+
+    def trans_stream_completion_message(
+        self,
+        completion_chunk: ChatCompletionChunk,
+    ) -> ChatCompletionChunk: ...
