@@ -1,14 +1,25 @@
-from typing import AsyncIterable, Iterable, Protocol
+from typing import Iterable, Protocol, Union
 
 from openai.types.chat import (
-    ChatCompletionChunk,
     ChatCompletionMessage,
     ChatCompletionMessageParam,
+    ChatCompletionMessageToolCall,
 )
+from openai.types.chat.chat_completion_chunk import ChoiceDelta
 from openai.types.shared_params.function_definition import FunctionDefinition
+
+StreamOutputType = Union[str, ChatCompletionMessageToolCall]
+
+
+class StreamProcessor(Protocol):
+    def process(self, chunk: str) -> list[StreamOutputType]: ...
+    def finalize(self) -> StreamOutputType: ...
 
 
 class Transformation(Protocol):
+    @classmethod
+    def create_stream_processor(cls) -> StreamProcessor: ...
+
     def trans_param_messages(
         self,
         messages: Iterable[ChatCompletionMessageParam],
@@ -17,10 +28,12 @@ class Transformation(Protocol):
 
     def trans_completion_message(
         self,
-        completion: ChatCompletionMessage,
+        message: ChatCompletionMessage,
     ) -> ChatCompletionMessage: ...
 
     def trans_completion_message_stream(
         self,
-        completion: AsyncIterable[ChatCompletionChunk],
-    ) -> AsyncIterable[ChatCompletionChunk]: ...
+        processor: StreamProcessor,
+        delta: ChoiceDelta,
+        finalize: bool = False,
+    ) -> ChoiceDelta: ...

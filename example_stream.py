@@ -14,6 +14,7 @@ logfire.instrument_openai(AsyncOpenAI)
 async def main():
     oai = make_tool_user(AsyncOpenAI())
     res = await oai.chat.completions.create(
+        stream=True,
         model="deepseek/deepseek-chat-v3-0324",  # From OpenRouter https://openrouter.ai/deepseek/deepseek-chat-v3-0324
         messages=[
             {
@@ -40,7 +41,13 @@ async def main():
             }
         ],
     )
-    print(res.choices[0].message)
+    async for chunk in res:
+        delta = chunk.choices[0].delta
+        if delta.content:
+            print(delta.content, end="", flush=True)
+        if delta.tool_calls:
+            print(delta.tool_calls, end="", flush=True)
+    print()
 
 
 if __name__ == "__main__":

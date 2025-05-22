@@ -5,7 +5,7 @@
 groups = ["default", "dev"]
 strategy = []
 lock_version = "4.5.0"
-content_hash = "sha256:199d1ba778d197d97f22d5a4ec82799d8f57944e2b0aa46ed6d0ed47e23e25fb"
+content_hash = "sha256:76693a0fe7b3c75f747650792f8efb419c71a4096f48bbdd525846d8c46773ec"
 
 [[metadata.targets]]
 requires_python = ">=3.10"
@@ -13,7 +13,11 @@ requires_python = ">=3.10"
 [[package]]
 name = "annotated-types"
 version = "0.7.0"
-summary = ""
+requires_python = ">=3.8"
+summary = "Reusable constraint types to use with typing.Annotated"
+dependencies = [
+    "typing-extensions>=4.0.0; python_version < \"3.9\"",
+]
 files = [
     {file = "annotated_types-0.7.0-py3-none-any.whl", hash = "sha256:1f02e8b43a8fbbc3f3e0d4f0f4bfc8131bcb4eebe8849b8e5c773f3a1c582a53"},
     {file = "annotated_types-0.7.0.tar.gz", hash = "sha256:aff07c09a53a08bc8cfccb9c85b05f1aa9a2a6f23728d790723543408344ce89"},
@@ -22,12 +26,13 @@ files = [
 [[package]]
 name = "anyio"
 version = "4.9.0"
-summary = ""
+requires_python = ">=3.9"
+summary = "High level compatibility layer for multiple asynchronous event loop implementations"
 dependencies = [
-    "exceptiongroup; python_full_version < \"3.11\"",
-    "idna",
-    "sniffio",
-    "typing-extensions; python_full_version < \"3.13\"",
+    "exceptiongroup>=1.0.2; python_version < \"3.11\"",
+    "idna>=2.8",
+    "sniffio>=1.1",
+    "typing-extensions>=4.5; python_version < \"3.13\"",
 ]
 files = [
     {file = "anyio-4.9.0-py3-none-any.whl", hash = "sha256:9f76d541cad6e36af7beb62e978876f3b41e3e04f2c1fbf0884604c0a9c4d93c"},
@@ -37,7 +42,8 @@ files = [
 [[package]]
 name = "certifi"
 version = "2025.1.31"
-summary = ""
+requires_python = ">=3.6"
+summary = "Python package for providing Mozilla's CA Bundle."
 files = [
     {file = "certifi-2025.1.31-py3-none-any.whl", hash = "sha256:ca78db4565a652026a4db2bcdf68f2fb589ea80d0be70e03929ed730746b84fe"},
     {file = "certifi-2025.1.31.tar.gz", hash = "sha256:3d5da6925056f6f18f119200434a4780a94263f10d1c21d032a6f6b2baa20651"},
@@ -46,7 +52,8 @@ files = [
 [[package]]
 name = "charset-normalizer"
 version = "3.4.1"
-summary = ""
+requires_python = ">=3.7"
+summary = "The Real First Universal Charset Detector. Open, modern and actively maintained alternative to Chardet."
 files = [
     {file = "charset_normalizer-3.4.1-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:91b36a978b5ae0ee86c394f5a54d6ef44db1de0815eb43de826d41d21e4af3de"},
     {file = "charset_normalizer-3.4.1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:7461baadb4dc00fd9e0acbe254e3d7d2112e7f92ced2adc96e54ef6501c5f176"},
@@ -107,7 +114,8 @@ files = [
 [[package]]
 name = "colorama"
 version = "0.4.6"
-summary = ""
+requires_python = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,!=3.4.*,!=3.5.*,!=3.6.*,>=2.7"
+summary = "Cross-platform colored terminal text."
 files = [
     {file = "colorama-0.4.6-py2.py3-none-any.whl", hash = "sha256:4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6"},
     {file = "colorama-0.4.6.tar.gz", hash = "sha256:08695f5cb7ed6e0531a20572697297273c47b8cae5a63ffc6d6ed5c201be6e44"},
@@ -116,9 +124,10 @@ files = [
 [[package]]
 name = "deprecated"
 version = "1.2.18"
-summary = ""
+requires_python = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
+summary = "Python @deprecated decorator to deprecate old python classes, functions or methods."
 dependencies = [
-    "wrapt",
+    "wrapt<2,>=1.10",
 ]
 files = [
     {file = "Deprecated-1.2.18-py2.py3-none-any.whl", hash = "sha256:bd5011788200372a32418f888e326a09ff80d0214bd961147cfed01b5c018eec"},
@@ -128,7 +137,8 @@ files = [
 [[package]]
 name = "distro"
 version = "1.9.0"
-summary = ""
+requires_python = ">=3.6"
+summary = "Distro - an OS platform information API"
 files = [
     {file = "distro-1.9.0-py3-none-any.whl", hash = "sha256:7bffd925d65168f85027d8da9af6bddab658135b840670a223589bc0c8ef02b2"},
     {file = "distro-1.9.0.tar.gz", hash = "sha256:2fa77c6fd8940f116ee1d6b94a2f90b13b5ea8d019b98bc8bafdcabcdd9bdbed"},
@@ -137,7 +147,8 @@ files = [
 [[package]]
 name = "exceptiongroup"
 version = "1.2.2"
-summary = ""
+requires_python = ">=3.7"
+summary = "Backport of PEP 654 (exception groups)"
 files = [
     {file = "exceptiongroup-1.2.2-py3-none-any.whl", hash = "sha256:3111b9d131c238bec2f8f516e123e14ba243563fb135d3fe885990585aa7795b"},
     {file = "exceptiongroup-1.2.2.tar.gz", hash = "sha256:47c2edf7c6738fafb49fd34290706d1a1a2f4d1c6df275526b62cbb4aa5393cc"},
@@ -146,7 +157,8 @@ files = [
 [[package]]
 name = "executing"
 version = "2.2.0"
-summary = ""
+requires_python = ">=3.8"
+summary = "Get the currently executing AST node of a frame, and other information"
 files = [
     {file = "executing-2.2.0-py2.py3-none-any.whl", hash = "sha256:11387150cad388d62750327a53d3339fad4888b39a6fe233c3afbb54ecffd3aa"},
     {file = "executing-2.2.0.tar.gz", hash = "sha256:5d108c028108fe2551d1a7b2e8b713341e2cb4fc0aa7dcf966fa4327a5226755"},
@@ -155,9 +167,10 @@ files = [
 [[package]]
 name = "googleapis-common-protos"
 version = "1.70.0"
-summary = ""
+requires_python = ">=3.7"
+summary = "Common protobufs used in Google APIs"
 dependencies = [
-    "protobuf",
+    "protobuf!=4.21.1,!=4.21.2,!=4.21.3,!=4.21.4,!=4.21.5,<7.0.0,>=3.20.2",
 ]
 files = [
     {file = "googleapis_common_protos-1.70.0-py3-none-any.whl", hash = "sha256:b8bfcca8c25a2bb253e0e0b0adaf8c00773e5e6af6fd92397576680b807e0fd8"},
@@ -167,7 +180,11 @@ files = [
 [[package]]
 name = "h11"
 version = "0.14.0"
-summary = ""
+requires_python = ">=3.7"
+summary = "A pure-Python, bring-your-own-I/O implementation of HTTP/1.1"
+dependencies = [
+    "typing-extensions; python_version < \"3.8\"",
+]
 files = [
     {file = "h11-0.14.0-py3-none-any.whl", hash = "sha256:e3fe4ac4b851c468cc8363d500db52c2ead036020723024a109d37346efaa761"},
     {file = "h11-0.14.0.tar.gz", hash = "sha256:8f19fbbe99e72420ff35c00b27a34cb9937e902a8b810e2c88300c6f0a3b699d"},
@@ -176,10 +193,11 @@ files = [
 [[package]]
 name = "httpcore"
 version = "1.0.8"
-summary = ""
+requires_python = ">=3.8"
+summary = "A minimal low-level HTTP client."
 dependencies = [
     "certifi",
-    "h11",
+    "h11<0.15,>=0.13",
 ]
 files = [
     {file = "httpcore-1.0.8-py3-none-any.whl", hash = "sha256:5254cf149bcb5f75e9d1b2b9f729ea4a4b883d1ad7379fc632b727cec23674be"},
@@ -189,11 +207,12 @@ files = [
 [[package]]
 name = "httpx"
 version = "0.28.1"
-summary = ""
+requires_python = ">=3.8"
+summary = "The next generation HTTP client."
 dependencies = [
     "anyio",
     "certifi",
-    "httpcore",
+    "httpcore==1.*",
     "idna",
 ]
 files = [
@@ -204,7 +223,8 @@ files = [
 [[package]]
 name = "idna"
 version = "3.10"
-summary = ""
+requires_python = ">=3.6"
+summary = "Internationalized Domain Names in Applications (IDNA)"
 files = [
     {file = "idna-3.10-py3-none-any.whl", hash = "sha256:946d195a0d259cbba61165e88e65941f16e9b36ea6ddb97f00452bae8b1287d3"},
     {file = "idna-3.10.tar.gz", hash = "sha256:12f65c9b470abda6dc35cf8e63cc574b1c52b11df2c86030af0ac09b01b13ea9"},
@@ -213,9 +233,11 @@ files = [
 [[package]]
 name = "importlib-metadata"
 version = "8.6.1"
-summary = ""
+requires_python = ">=3.9"
+summary = "Read metadata from Python packages"
 dependencies = [
-    "zipp",
+    "typing-extensions>=3.6.4; python_version < \"3.8\"",
+    "zipp>=3.20",
 ]
 files = [
     {file = "importlib_metadata-8.6.1-py3-none-any.whl", hash = "sha256:02a89390c1e15fdfdc0d7c6b25cb3e62650d0494005c97d6f148bf5b9787525e"},
@@ -225,9 +247,10 @@ files = [
 [[package]]
 name = "jinja2"
 version = "3.1.6"
-summary = ""
+requires_python = ">=3.7"
+summary = "A very fast and expressive template engine."
 dependencies = [
-    "markupsafe",
+    "MarkupSafe>=2.0",
 ]
 files = [
     {file = "jinja2-3.1.6-py3-none-any.whl", hash = "sha256:85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67"},
@@ -237,7 +260,8 @@ files = [
 [[package]]
 name = "jiter"
 version = "0.9.0"
-summary = ""
+requires_python = ">=3.8"
+summary = "Fast iterable JSON parser."
 files = [
     {file = "jiter-0.9.0-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:816ec9b60fdfd1fec87da1d7ed46c66c44ffec37ab2ef7de5b147b2fce3fd5ad"},
     {file = "jiter-0.9.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:9b1d3086f8a3ee0194ecf2008cf81286a5c3e540d977fa038ff23576c023c0ea"},
@@ -296,7 +320,8 @@ files = [
 [[package]]
 name = "json-repair"
 version = "0.41.1"
-summary = ""
+requires_python = ">=3.9"
+summary = "A package to repair broken json strings"
 files = [
     {file = "json_repair-0.41.1-py3-none-any.whl", hash = "sha256:0e181fd43a696887881fe19fed23422a54b3e4c558b6ff27a86a8c3ddde9ae79"},
     {file = "json_repair-0.41.1.tar.gz", hash = "sha256:bba404b0888c84a6b86ecc02ec43b71b673cfee463baf6da94e079c55b136565"},
@@ -305,16 +330,17 @@ files = [
 [[package]]
 name = "logfire"
 version = "3.14.0"
-summary = ""
+requires_python = ">=3.8"
+summary = "The best Python observability tool! 🪵🔥"
 dependencies = [
-    "executing",
-    "opentelemetry-exporter-otlp-proto-http",
-    "opentelemetry-instrumentation",
-    "opentelemetry-sdk",
-    "protobuf",
-    "rich",
-    "tomli; python_full_version < \"3.11\"",
-    "typing-extensions",
+    "executing>=2.0.1",
+    "opentelemetry-exporter-otlp-proto-http<1.33.0,>=1.21.0",
+    "opentelemetry-instrumentation>=0.41b0",
+    "opentelemetry-sdk<1.33.0,>=1.21.0",
+    "protobuf>=4.23.4",
+    "rich>=13.4.2",
+    "tomli>=2.0.1; python_version < \"3.11\"",
+    "typing-extensions>=4.1.0",
 ]
 files = [
     {file = "logfire-3.14.0-py3-none-any.whl", hash = "sha256:4f95cf98a7c29cd7cd00e093ba75ce1e4e19e5069acda8b1577a4b7790e0237a"},
@@ -324,9 +350,10 @@ files = [
 [[package]]
 name = "markdown-it-py"
 version = "3.0.0"
-summary = ""
+requires_python = ">=3.8"
+summary = "Python port of markdown-it. Markdown parsing, done right!"
 dependencies = [
-    "mdurl",
+    "mdurl~=0.1",
 ]
 files = [
     {file = "markdown-it-py-3.0.0.tar.gz", hash = "sha256:e3f60a94fa066dc52ec76661e37c851cb232d92f9886b15cb560aaada2df8feb"},
@@ -336,7 +363,8 @@ files = [
 [[package]]
 name = "markupsafe"
 version = "3.0.2"
-summary = ""
+requires_python = ">=3.9"
+summary = "Safely add untrusted strings to HTML/XML markup."
 files = [
     {file = "MarkupSafe-3.0.2-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:7e94c425039cde14257288fd61dcfb01963e658efbc0ff54f5306b06054700f8"},
     {file = "MarkupSafe-3.0.2-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:9e2d922824181480953426608b81967de705c3cef4d1af983af849d7bd619158"},
@@ -394,7 +422,8 @@ files = [
 [[package]]
 name = "mdurl"
 version = "0.1.2"
-summary = ""
+requires_python = ">=3.7"
+summary = "Markdown URL utilities"
 files = [
     {file = "mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8"},
     {file = "mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba"},
@@ -403,16 +432,17 @@ files = [
 [[package]]
 name = "openai"
 version = "1.75.0"
-summary = ""
+requires_python = ">=3.8"
+summary = "The official Python library for the openai API"
 dependencies = [
-    "anyio",
-    "distro",
-    "httpx",
-    "jiter",
-    "pydantic",
+    "anyio<5,>=3.5.0",
+    "distro<2,>=1.7.0",
+    "httpx<1,>=0.23.0",
+    "jiter<1,>=0.4.0",
+    "pydantic<3,>=1.9.0",
     "sniffio",
-    "tqdm",
-    "typing-extensions",
+    "tqdm>4",
+    "typing-extensions<5,>=4.11",
 ]
 files = [
     {file = "openai-1.75.0-py3-none-any.whl", hash = "sha256:fe6f932d2ded3b429ff67cc9ad118c71327db32eb9d32dd723de3acfca337125"},
@@ -422,10 +452,11 @@ files = [
 [[package]]
 name = "opentelemetry-api"
 version = "1.32.1"
-summary = ""
+requires_python = ">=3.8"
+summary = "OpenTelemetry Python API"
 dependencies = [
-    "deprecated",
-    "importlib-metadata",
+    "deprecated>=1.2.6",
+    "importlib-metadata<8.7.0,>=6.0",
 ]
 files = [
     {file = "opentelemetry_api-1.32.1-py3-none-any.whl", hash = "sha256:bbd19f14ab9f15f0e85e43e6a958aa4cb1f36870ee62b7fd205783a112012724"},
@@ -435,9 +466,10 @@ files = [
 [[package]]
 name = "opentelemetry-exporter-otlp-proto-common"
 version = "1.32.1"
-summary = ""
+requires_python = ">=3.8"
+summary = "OpenTelemetry Protobuf encoding"
 dependencies = [
-    "opentelemetry-proto",
+    "opentelemetry-proto==1.32.1",
 ]
 files = [
     {file = "opentelemetry_exporter_otlp_proto_common-1.32.1-py3-none-any.whl", hash = "sha256:a1e9ad3d0d9a9405c7ff8cdb54ba9b265da16da9844fe36b8c9661114b56c5d9"},
@@ -447,15 +479,16 @@ files = [
 [[package]]
 name = "opentelemetry-exporter-otlp-proto-http"
 version = "1.32.1"
-summary = ""
+requires_python = ">=3.8"
+summary = "OpenTelemetry Collector Protobuf over HTTP Exporter"
 dependencies = [
-    "deprecated",
-    "googleapis-common-protos",
-    "opentelemetry-api",
-    "opentelemetry-exporter-otlp-proto-common",
-    "opentelemetry-proto",
-    "opentelemetry-sdk",
-    "requests",
+    "deprecated>=1.2.6",
+    "googleapis-common-protos~=1.52",
+    "opentelemetry-api~=1.15",
+    "opentelemetry-exporter-otlp-proto-common==1.32.1",
+    "opentelemetry-proto==1.32.1",
+    "opentelemetry-sdk~=1.32.1",
+    "requests~=2.7",
 ]
 files = [
     {file = "opentelemetry_exporter_otlp_proto_http-1.32.1-py3-none-any.whl", hash = "sha256:3cc048b0c295aa2cbafb883feaf217c7525b396567eeeabb5459affb08b7fefe"},
@@ -465,12 +498,13 @@ files = [
 [[package]]
 name = "opentelemetry-instrumentation"
 version = "0.53b1"
-summary = ""
+requires_python = ">=3.8"
+summary = "Instrumentation Tools & Auto Instrumentation for OpenTelemetry Python"
 dependencies = [
-    "opentelemetry-api",
-    "opentelemetry-semantic-conventions",
-    "packaging",
-    "wrapt",
+    "opentelemetry-api~=1.4",
+    "opentelemetry-semantic-conventions==0.53b1",
+    "packaging>=18.0",
+    "wrapt<2.0.0,>=1.0.0",
 ]
 files = [
     {file = "opentelemetry_instrumentation-0.53b1-py3-none-any.whl", hash = "sha256:c07850cecfbc51e8b357f56d5886ae5ccaa828635b220d0f5e78f941ea9a83ca"},
@@ -480,9 +514,10 @@ files = [
 [[package]]
 name = "opentelemetry-proto"
 version = "1.32.1"
-summary = ""
+requires_python = ">=3.8"
+summary = "OpenTelemetry Python Proto"
 dependencies = [
-    "protobuf",
+    "protobuf<6.0,>=5.0",
 ]
 files = [
     {file = "opentelemetry_proto-1.32.1-py3-none-any.whl", hash = "sha256:fe56df31033ab0c40af7525f8bf4c487313377bbcfdf94184b701a8ccebc800e"},
@@ -492,11 +527,12 @@ files = [
 [[package]]
 name = "opentelemetry-sdk"
 version = "1.32.1"
-summary = ""
+requires_python = ">=3.8"
+summary = "OpenTelemetry Python SDK"
 dependencies = [
-    "opentelemetry-api",
-    "opentelemetry-semantic-conventions",
-    "typing-extensions",
+    "opentelemetry-api==1.32.1",
+    "opentelemetry-semantic-conventions==0.53b1",
+    "typing-extensions>=3.7.4",
 ]
 files = [
     {file = "opentelemetry_sdk-1.32.1-py3-none-any.whl", hash = "sha256:bba37b70a08038613247bc42beee5a81b0ddca422c7d7f1b097b32bf1c7e2f17"},
@@ -506,10 +542,11 @@ files = [
 [[package]]
 name = "opentelemetry-semantic-conventions"
 version = "0.53b1"
-summary = ""
+requires_python = ">=3.8"
+summary = "OpenTelemetry Semantic Conventions"
 dependencies = [
-    "deprecated",
-    "opentelemetry-api",
+    "deprecated>=1.2.6",
+    "opentelemetry-api==1.32.1",
 ]
 files = [
     {file = "opentelemetry_semantic_conventions-0.53b1-py3-none-any.whl", hash = "sha256:21df3ed13f035f8f3ea42d07cbebae37020367a53b47f1ebee3b10a381a00208"},
@@ -519,7 +556,8 @@ files = [
 [[package]]
 name = "packaging"
 version = "25.0"
-summary = ""
+requires_python = ">=3.8"
+summary = "Core utilities for Python packages"
 files = [
     {file = "packaging-25.0-py3-none-any.whl", hash = "sha256:29572ef2b1f17581046b3a2227d5c611fb25ec70ca1ba8554b24b0e69331a484"},
     {file = "packaging-25.0.tar.gz", hash = "sha256:d443872c98d677bf60f6a1f2f8c1cb748e8fe762d2bf9d3148b5599295b0fc4f"},
@@ -528,6 +566,7 @@ files = [
 [[package]]
 name = "protobuf"
 version = "5.29.4"
+requires_python = ">=3.8"
 summary = ""
 files = [
     {file = "protobuf-5.29.4-cp310-abi3-win32.whl", hash = "sha256:13eb236f8eb9ec34e63fc8b1d6efd2777d062fa6aaa68268fb67cf77f6839ad7"},
@@ -542,12 +581,13 @@ files = [
 [[package]]
 name = "pydantic"
 version = "2.11.3"
-summary = ""
+requires_python = ">=3.9"
+summary = "Data validation using Python type hints"
 dependencies = [
-    "annotated-types",
-    "pydantic-core",
-    "typing-extensions",
-    "typing-inspection",
+    "annotated-types>=0.6.0",
+    "pydantic-core==2.33.1",
+    "typing-extensions>=4.12.2",
+    "typing-inspection>=0.4.0",
 ]
 files = [
     {file = "pydantic-2.11.3-py3-none-any.whl", hash = "sha256:a082753436a07f9ba1289c6ffa01cd93db3548776088aa917cc43b63f68fa60f"},
@@ -557,9 +597,10 @@ files = [
 [[package]]
 name = "pydantic-core"
 version = "2.33.1"
-summary = ""
+requires_python = ">=3.9"
+summary = "Core functionality for Pydantic validation and serialization"
 dependencies = [
-    "typing-extensions",
+    "typing-extensions!=4.7.0,>=4.6.0",
 ]
 files = [
     {file = "pydantic_core-2.33.1-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:3077cfdb6125cc8dab61b155fdd714663e401f0e6883f9632118ec12cf42df26"},
@@ -644,21 +685,33 @@ files = [
 [[package]]
 name = "pygments"
 version = "2.19.1"
-summary = ""
+requires_python = ">=3.8"
+summary = "Pygments is a syntax highlighting package written in Python."
 files = [
     {file = "pygments-2.19.1-py3-none-any.whl", hash = "sha256:9ea1544ad55cecf4b8242fab6dd35a93bbce657034b0611ee383099054ab6d8c"},
     {file = "pygments-2.19.1.tar.gz", hash = "sha256:61c16d2a8576dc0649d9f39e089b5f02bcd27fba10d8fb4dcc28173f7a45151f"},
 ]
 
 [[package]]
+name = "python-dotenv"
+version = "1.1.0"
+requires_python = ">=3.9"
+summary = "Read key-value pairs from a .env file and set them as environment variables"
+files = [
+    {file = "python_dotenv-1.1.0-py3-none-any.whl", hash = "sha256:d7c01d9e2293916c18baf562d95698754b0dbbb5e74d457c45d4f6561fb9d55d"},
+    {file = "python_dotenv-1.1.0.tar.gz", hash = "sha256:41f90bc6f5f177fb41f53e87666db362025010eb28f60a01c9143bfa33a2b2d5"},
+]
+
+[[package]]
 name = "requests"
 version = "2.32.3"
-summary = ""
+requires_python = ">=3.8"
+summary = "Python HTTP for Humans."
 dependencies = [
-    "certifi",
-    "charset-normalizer",
-    "idna",
-    "urllib3",
+    "certifi>=2017.4.17",
+    "charset-normalizer<4,>=2",
+    "idna<4,>=2.5",
+    "urllib3<3,>=1.21.1",
 ]
 files = [
     {file = "requests-2.32.3-py3-none-any.whl", hash = "sha256:70761cfe03c773ceb22aa2f671b4757976145175cdfca038c02654d061d6dcc6"},
@@ -668,11 +721,12 @@ files = [
 [[package]]
 name = "rich"
 version = "14.0.0"
-summary = ""
+requires_python = ">=3.8.0"
+summary = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
 dependencies = [
-    "markdown-it-py",
-    "pygments",
-    "typing-extensions; python_full_version < \"3.11\"",
+    "markdown-it-py>=2.2.0",
+    "pygments<3.0.0,>=2.13.0",
+    "typing-extensions<5.0,>=4.0.0; python_version < \"3.11\"",
 ]
 files = [
     {file = "rich-14.0.0-py3-none-any.whl", hash = "sha256:1c9491e1951aac09caffd42f448ee3d04e58923ffe14993f6e83068dc395d7e0"},
@@ -682,7 +736,8 @@ files = [
 [[package]]
 name = "ruff"
 version = "0.11.6"
-summary = ""
+requires_python = ">=3.7"
+summary = "An extremely fast Python linter and code formatter, written in Rust."
 files = [
     {file = "ruff-0.11.6-py3-none-linux_armv6l.whl", hash = "sha256:d84dcbe74cf9356d1bdb4a78cf74fd47c740bf7bdeb7529068f69b08272239a1"},
     {file = "ruff-0.11.6-py3-none-macosx_10_12_x86_64.whl", hash = "sha256:9bc583628e1096148011a5d51ff3c836f51899e61112e03e5f2b1573a9b726de"},
@@ -707,7 +762,8 @@ files = [
 [[package]]
 name = "sniffio"
 version = "1.3.1"
-summary = ""
+requires_python = ">=3.7"
+summary = "Sniff out which async library your code is running under"
 files = [
     {file = "sniffio-1.3.1-py3-none-any.whl", hash = "sha256:2f6da418d1f1e0fddd844478f41680e794e6051915791a034ff65e5f100525a2"},
     {file = "sniffio-1.3.1.tar.gz", hash = "sha256:f4324edc670a0f49750a81b895f35c3adb843cca46f0530f79fc1babb23789dc"},
@@ -716,7 +772,8 @@ files = [
 [[package]]
 name = "tomli"
 version = "2.2.1"
-summary = ""
+requires_python = ">=3.8"
+summary = "A lil' TOML parser"
 files = [
     {file = "tomli-2.2.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:678e4fa69e4575eb77d103de3df8a895e1591b48e740211bd1067378c69e8249"},
     {file = "tomli-2.2.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:023aa114dd824ade0100497eb2318602af309e5a55595f76b626d6d9f3b7b0a6"},
@@ -755,9 +812,10 @@ files = [
 [[package]]
 name = "tqdm"
 version = "4.67.1"
-summary = ""
+requires_python = ">=3.7"
+summary = "Fast, Extensible Progress Meter"
 dependencies = [
-    "colorama; sys_platform == \"win32\"",
+    "colorama; platform_system == \"Windows\"",
 ]
 files = [
     {file = "tqdm-4.67.1-py3-none-any.whl", hash = "sha256:26445eca388f82e72884e0d580d5464cd801a3ea01e63e5601bdff9ba6a48de2"},
@@ -767,7 +825,8 @@ files = [
 [[package]]
 name = "typing-extensions"
 version = "4.13.2"
-summary = ""
+requires_python = ">=3.8"
+summary = "Backported and Experimental Type Hints for Python 3.8+"
 files = [
     {file = "typing_extensions-4.13.2-py3-none-any.whl", hash = "sha256:a439e7c04b49fec3e5d3e2beaa21755cadbbdc391694e28ccdd36ca4a1408f8c"},
     {file = "typing_extensions-4.13.2.tar.gz", hash = "sha256:e6c81219bd689f51865d9e372991c540bda33a0379d5573cddb9a3a23f7caaef"},
@@ -776,9 +835,10 @@ files = [
 [[package]]
 name = "typing-inspection"
 version = "0.4.0"
-summary = ""
+requires_python = ">=3.9"
+summary = "Runtime typing introspection tools"
 dependencies = [
-    "typing-extensions",
+    "typing-extensions>=4.12.0",
 ]
 files = [
     {file = "typing_inspection-0.4.0-py3-none-any.whl", hash = "sha256:50e72559fcd2a6367a19f7a7e610e6afcb9fac940c650290eed893d61386832f"},
@@ -788,7 +848,8 @@ files = [
 [[package]]
 name = "urllib3"
 version = "2.4.0"
-summary = ""
+requires_python = ">=3.9"
+summary = "HTTP library with thread-safe connection pooling, file post, and more."
 files = [
     {file = "urllib3-2.4.0-py3-none-any.whl", hash = "sha256:4e16665048960a0900c702d4a66415956a584919c03361cac9f1df5c5dd7e813"},
     {file = "urllib3-2.4.0.tar.gz", hash = "sha256:414bc6535b787febd7567804cc015fee39daab8ad86268f1310a9250697de466"},
@@ -797,7 +858,8 @@ files = [
 [[package]]
 name = "wrapt"
 version = "1.17.2"
-summary = ""
+requires_python = ">=3.8"
+summary = "Module for decorators, wrappers and monkey patching."
 files = [
     {file = "wrapt-1.17.2-cp310-cp310-macosx_10_9_universal2.whl", hash = "sha256:3d57c572081fed831ad2d26fd430d565b76aa277ed1d30ff4d40670b1c0dd984"},
     {file = "wrapt-1.17.2-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:b5e251054542ae57ac7f3fba5d10bfff615b6c2fb09abeb37d2f1463f841ae22"},
@@ -861,7 +923,8 @@ files = [
 [[package]]
 name = "zipp"
 version = "3.21.0"
-summary = ""
+requires_python = ">=3.9"
+summary = "Backport of pathlib-compatible object wrapper for zip files"
 files = [
     {file = "zipp-3.21.0-py3-none-any.whl", hash = "sha256:ac1bbe05fd2991f160ebce24ffbac5f6d11d83dc90891255885223d42b3cd931"},
     {file = "zipp-3.21.0.tar.gz", hash = "sha256:2c9958f6430a2040341a52eb608ed6dd93ef4392e02ffe219417c1b28b5dd1f4"},

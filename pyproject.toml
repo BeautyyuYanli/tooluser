@@ -46,4 +46,5 @@ ignore = [
 dev = [
     "ruff>=0.11.6",
     "logfire>=3.14.0",
+    "python-dotenv>=1.1.0",
 ]

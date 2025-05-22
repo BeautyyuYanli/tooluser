@@ -1,22 +1,26 @@
 import json
 import re
 import uuid
-from typing import AsyncIterable, Iterable, List, Union
+from typing import Iterable, List
 
 from jinja2 import Template
 from json_repair import repair_json
 from openai.types.chat import (
-    ChatCompletionChunk,
     ChatCompletionMessage,
     ChatCompletionMessageParam,
     ChatCompletionMessageToolCall,
     ChatCompletionMessageToolCallParam,
     ChatCompletionToolMessageParam,
 )
+from openai.types.chat.chat_completion_chunk import (
+    ChoiceDelta,
+    ChoiceDeltaToolCall,
+    ChoiceDeltaToolCallFunction,
+)
 from openai.types.chat.chat_completion_message_tool_call import Function
 from openai.types.shared_params.function_definition import FunctionDefinition
 
-from tooluser.transform import Transformation
+from tooluser.transform import StreamOutputType, StreamProcessor, Transformation
 
 
 def tools_list_prompt(tools: Iterable[FunctionDefinition]):
@@ -130,15 +134,7 @@ def tool_result_parse(text: str) -> ChatCompletionToolMessageParam:
     }
 
 
-OutputType = Union[str, ChatCompletionMessageToolCall]
-
-
-async def _async_iterable_from_list(items: Iterable[str]) -> AsyncIterable[str]:
-    for item in items:
-        yield item
-
-
-class StreamProcessor:
+class HermesStreamProcessor(StreamProcessor):
     """Processes a stream of text, yielding tool calls and other content."""
 
     start_tag: str
@@ -154,7 +150,7 @@ class StreamProcessor:
         self.buffer = ""
         self.in_tool_call = False
 
-    def process(self, chunk: str) -> list[OutputType]:
+    def process(self, chunk: str) -> list[StreamOutputType]:
         self.buffer += chunk
         outputs = []
         while True:
@@ -189,7 +185,7 @@ class StreamProcessor:
                     continue
         return outputs
 
-    def finalize(self) -> OutputType:
+    def finalize(self) -> StreamOutputType:
         if self.in_tool_call:
             try:
                 return tool_call_parse(self.buffer)
@@ -202,6 +198,10 @@ class StreamProcessor:
 class HermesTransformation(Transformation):
     """Transform tool_use API call to a user prompt, in Hermes template format.
     ref: https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct/blob/main/tokenizer_config.json#L198"""
+
+    @classmethod
+    def create_stream_processor(cls) -> StreamProcessor:
+        return HermesStreamProcessor(start_tag="<tool_call>", end_tag="</tool_call>")
 
     def trans_param_messages(
         self,
@@ -250,10 +250,10 @@ class HermesTransformation(Transformation):
         self,
         completion: ChatCompletionMessage,
     ) -> ChatCompletionMessage:
+        processor = self.__class__.create_stream_processor()
         if completion.content is not None:
             tool_calls: List[ChatCompletionMessageToolCall] = []
             output_content = ""
-            processor = StreamProcessor("<tool_call>", "</tool_call>")
             outputs = processor.process(completion.content)
             outputs.append(processor.finalize())
             for output in outputs:
@@ -268,6 +268,34 @@ class HermesTransformation(Transformation):
 
     def trans_completion_message_stream(
         self,
-        completion: AsyncIterable[ChatCompletionChunk],
-    ) -> AsyncIterable[ChatCompletionChunk]:
-        pass
+        processor: StreamProcessor,
+        delta: ChoiceDelta,
+        finalize: bool = False,
+    ) -> ChoiceDelta:
+        if not finalize:
+            if delta.content is None:
+                raise ValueError("Delta content is None but finalize is False")
+            outputs = processor.process(delta.content)
+        else:
+            outputs = [processor.finalize()]
+        tool_calls: list[ChatCompletionMessageToolCall] = []
+        content = ""
+        for output in outputs:
+            if isinstance(output, ChatCompletionMessageToolCall):
+                tool_calls.append(output)
+            else:
+                content += output
+        delta.content = content
+        delta.tool_calls = [
+            ChoiceDeltaToolCall(
+                index=0,
+                id=x.id,
+                function=ChoiceDeltaToolCallFunction(
+                    name=x.function.name,
+                    arguments=x.function.arguments,
+                ),
+                type=x.type,
+            )
+            for x in tool_calls
+        ]
+        return delta
