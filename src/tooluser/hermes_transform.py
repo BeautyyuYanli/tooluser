@@ -1,8 +1,8 @@
 import json
 import re
 import uuid
-from typing import Callable, Iterable, List
-
+from typing import Callable, Iterable, List, Union
+from queue import Queue
 from jinja2 import Template
 from json_repair import repair_json
 from openai.types.chat import (
@@ -129,12 +129,13 @@ def tool_result_parse(text: str) -> ChatCompletionToolMessageParam:
     }
 
 
+OutputType = Union[str, ChatCompletionMessageToolCall, None]
+
 def stream_process(
     text_stream: Iterable[str],
     start_tag: str,
     end_tag: str,
-    callback: Callable[[str], None],
-):
+)->Iterable[OutputType]:
     BUFFER_SIZE = len(start_tag)
 
     buffer = ""
@@ -169,25 +170,18 @@ def stream_process(
 
                 # Found complete tool call
                 end_idx += len(end_tag)
-                callback(buffer[:end_idx])
+                yield tool_call_parse(buffer[:end_idx])
                 buffer = buffer[end_idx:]
                 in_tool_call = False
 
     # Yield any remaining content
     if buffer:
         yield buffer
+    yield None
 
 
 def stream_process_tool_call(text_stream: Iterable[str]):
-    tool_calls: List[ChatCompletionMessageToolCall] = []
-
-    def callback(text: str):
-        tool_calls.append(tool_call_parse(text))
-
-    return (
-        stream_process(text_stream, "<tool_call>", "</tool_call>", callback),
-        tool_calls,
-    )
+    return stream_process(text_stream, "<tool_call>", "</tool_call>")
 
 
 class HermesTransformation(Transformation):
@@ -242,8 +236,16 @@ class HermesTransformation(Transformation):
         completion: ChatCompletionMessage,
     ) -> ChatCompletionMessage:
         if completion.content is not None:
-            streaming, tool_calls = stream_process_tool_call([completion.content])
-            completion.content = "".join(streaming)
+            tool_calls: List[ChatCompletionMessageToolCall] = []
+            output_content = ""
+            for output in stream_process_tool_call([completion.content]):
+                if output is None:
+                    break
+                elif isinstance(output, ChatCompletionMessageToolCall):
+                    tool_calls.append(output)
+                else:
+                    output_content += output
+            completion.content = output_content
             if tool_calls:
                 completion.tool_calls = tool_calls
         return completion
