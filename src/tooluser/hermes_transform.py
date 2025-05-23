@@ -285,7 +285,7 @@ class HermesTransformation(Transformation):
                 tool_calls.append(output)
             else:
                 content += output
-        delta.content = content
+        delta.content = content or None
         delta.tool_calls = [
             ChoiceDeltaToolCall(
                 index=0,
@@ -297,5 +297,5 @@ class HermesTransformation(Transformation):
                 type=x.type,
             )
             for x in tool_calls
-        ]
+        ] or None
         return delta
