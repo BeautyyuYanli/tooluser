@@ -24,9 +24,20 @@ jobs:
     - name: Setup PDM
       uses: pdm-project/setup-pdm@v4
 
+    - name: Install dependencies
+      run: |
+        pdm install -G dev
+
+    - name: Run linting
+      run: |
+        pdm run check
+
+    - name: Run tests
+      run: |
+        pdm run test
+
     - name: Build Package
       run: pdm build
-
 
     - name: Set Repository
       if: github.event_name == 'workflow_dispatch'

@@ -19,9 +19,8 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install PDM
-      run: |
-        curl -sSL https://pdm-project.org/install-pdm.py | python3 -
+    - name: Setup PDM
+      uses: pdm-project/setup-pdm@v4
 
     - name: Install dependencies
       run: |
