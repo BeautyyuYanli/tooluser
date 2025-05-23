@@ -1,4 +1,3 @@
-import logfire
 from dotenv import load_dotenv
 from openai import AsyncOpenAI
 from rich import print
@@ -6,9 +5,6 @@ from rich import print
 from tooluser import make_tool_user
 
 load_dotenv()
-
-logfire.configure()
-logfire.instrument_openai(AsyncOpenAI)
 
 
 async def main():
