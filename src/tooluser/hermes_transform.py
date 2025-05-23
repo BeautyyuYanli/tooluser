@@ -59,12 +59,25 @@ def tool_call_parse(text: str):
     tool_call_match = re.search(r"<tool_call>(.*?)</tool_call>", text, re.DOTALL)
     if tool_call_match:
         text = tool_call_match.group(1).strip()
+    else:
+        # Try to match a JSON object with name and arguments keys
+        json_match = re.search(
+            r'{\s*"name"\s*:\s*"[^"]+"\s*,\s*"arguments"\s*:', text, re.DOTALL
+        )
+        if json_match:
+            text = text.strip()
 
     # Parse the JSON-formatted tool call
     try:
         tool_call_data: dict = repair_json(text, return_objects=True)  # type: ignore
     except Exception as e:
         raise ValueError("Invalid tool call format - must be valid JSON") from e
+
+    # Check if the parsed data has the required structure for a function call
+    if not isinstance(tool_call_data, dict) or not all(
+        key in tool_call_data for key in ["name", "arguments"]
+    ):
+        raise ValueError("Invalid tool call format - missing required fields")
 
     try:
         # Create a Function object

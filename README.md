@@ -1,10 +1,17 @@
-# tooluser - Enable tool-use ability for any LLM model (DeepSeek V3/R1, etc.)
+# ToolUser
+
+[![GitHub release](https://img.shields.io/github/v/release/BeautyyuYanli/tooluser?label=Version&style=flat-square)](https://github.com/BeautyyuYanli/tooluser/releases) [![Build Status](https://img.shields.io/github/actions/workflow/status/BeautyyuYanli/tooluser/publish.yaml?style=flat-square&logo=github-actions&logoColor=white)](https://github.com/BeautyyuYanli/tooluser/actions/workflows/publish.yaml) [![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=flat-square&logo=apache&logoColor=white)](https://github.com/BeautyyuYanli/tooluser/blob/main/LICENSE)
+
+Enable tool-use ability for any LLM model (DeepSeek V3/R1, etc.)
 
 For some models/providers that doesn't natively support function calling (e.g. DeepSeek V3/R1), you can use this library to transform the tool calls to a user prompt, in Hermes template format by default.
 
-```
+## Installation
+
+```bash
 pip install tooluser
 ```
+
 ```python
 from openai import AsyncOpenAI
 from tooluser import make_tool_user
@@ -60,7 +67,8 @@ As we want to make use of the OpenAI chat completion API, we do not directly use
 The actually API call is:
 
 System:
-```
+
+```xml
 <tool_instruction>
 You are a function calling AI model. You are provided with function signatures within <tools> </tools> XML tags. You may call one or more functions to assist with the user query. Don't make assumptions about what values to plug into functions.
 <tools>
@@ -81,12 +89,14 @@ Here is an example of a tool call:
 ```
 
 User:
-```
+
+```xml
 What's the time in Shanghai?
 ```
 
 Assistant:
-```
+
+```xml
 <tool_call>
 {"name": "get_time", "arguments": {"location": "Shanghai"}}
 </tool_call>
