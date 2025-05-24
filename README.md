@@ -1,6 +1,6 @@
 # ToolUser
 
-[![GitHub release](https://img.shields.io/github/v/release/BeautyyuYanli/tooluser?label=Version&style=flat-square)](https://github.com/BeautyyuYanli/tooluser/releases) [![Build Status](https://img.shields.io/github/actions/workflow/status/BeautyyuYanli/tooluser/publish.yaml?style=flat-square&logo=github-actions&logoColor=white)](https://github.com/BeautyyuYanli/tooluser/actions/workflows/publish.yaml) [![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=flat-square&logo=apache&logoColor=white)](https://github.com/BeautyyuYanli/tooluser/blob/main/LICENSE)
+[![GitHub release](https://img.shields.io/github/v/release/BeautyyuYanli/tooluser?label=Version&style=flat-square)](https://github.com/BeautyyuYanli/tooluser/releases) [![Build Status](https://img.shields.io/github/actions/workflow/status/BeautyyuYanli/tooluser/publish.yaml?style=flat-square&logo=github-actions&logoColor=white)](https://github.com/BeautyyuYanli/tooluser/actions/workflows/publish.yaml) [![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=flat-square&logo=apache&logoColor=white)](https://github.com/BeautyyuYanli/tooluser/blob/main/LICENSE) [![Python](https://img.shields.io/badge/Python-3.10%20|%203.11%20|%203.12-blue?style=flat-square&logo=python&logoColor=white)](https://github.com/BeautyyuYanli/tooluser)
 
 Enable tool-use ability for any LLM model (DeepSeek V3/R1, etc.)
 
