@@ -1,17 +1,28 @@
-from functools import wraps
-from typing import AsyncIterable, AsyncIterator
+from typing import (
+    AsyncIterable,
+    AsyncIterator,
+    Iterable,
+    Literal,
+    Optional,
+    Union,
+    overload,
+)
 
 from openai import AsyncOpenAI
+from openai._streaming import AsyncStream
+from openai._types import NOT_GIVEN, NotGiven
+from openai._utils import required_args
 from openai.resources.chat.completions import AsyncCompletions
 from openai.types.chat.chat_completion import ChatCompletion
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
+from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 from typing_extensions import Self
 
 from tooluser.hermes_transform import HermesTransformation
 from tooluser.transform import StreamProcessor, Transformation
 
 
-class _AsyncStreamLike:
+class _AsyncStreamLike(AsyncStream[ChatCompletionChunk]):
     """Wrapper that provides the same interface as OpenAI's AsyncStream"""
 
     def __init__(self, stream: AsyncIterable[ChatCompletionChunk]):
@@ -32,9 +43,15 @@ class _AsyncStreamLike:
         return None
 
 
-def make_tool_user(client: AsyncOpenAI, transformation: Transformation | None = None):
+def make_tool_user(
+    client: AsyncOpenAI,
+    transformation: Transformation | None = None,
+    enable_raw_json_detection: bool = False,
+):
     if transformation is None:
-        transformation = HermesTransformation()
+        transformation = HermesTransformation(
+            enable_raw_json_detection=enable_raw_json_detection
+        )
 
     class ProxyAsyncCompletions(AsyncCompletions):
         def __init__(self, client):
@@ -42,7 +59,37 @@ def make_tool_user(client: AsyncOpenAI, transformation: Transformation | None = 
             self._client = client
             super().__init__(client)
 
-        @wraps(AsyncCompletions.create)
+        @overload
+        async def create(
+            self,
+            *,
+            messages: Iterable[ChatCompletionMessageParam],
+            model: Union[str, object],
+            stream: Optional[Literal[False]] | NotGiven = NOT_GIVEN,
+            **kwargs,
+        ) -> ChatCompletion: ...
+
+        @overload
+        async def create(
+            self,
+            *,
+            messages: Iterable[ChatCompletionMessageParam],
+            model: Union[str, object],
+            stream: Literal[True],
+            **kwargs,
+        ) -> _AsyncStreamLike: ...
+
+        @overload
+        async def create(
+            self,
+            *,
+            messages: Iterable[ChatCompletionMessageParam],
+            model: Union[str, object],
+            stream: bool,
+            **kwargs,
+        ) -> ChatCompletion | _AsyncStreamLike: ...
+
+        @required_args(["messages", "model"], ["messages", "model", "stream"])
         async def create(self, *args, **kwargs):
             messages = kwargs.get("messages", [])
             tools = kwargs.pop("tools", [])
@@ -69,7 +116,7 @@ def make_tool_user(client: AsyncOpenAI, transformation: Transformation | None = 
                         for idx, choice in enumerate(chunk.choices):
                             if idx not in processors:
                                 processors[idx] = (
-                                    transformation.create_stream_processor()
+                                    transformation.create_stream_processor_instance()
                                 )
                             if choice.delta.content is not None:
                                 if choice.finish_reason is None:

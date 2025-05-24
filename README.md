@@ -1,6 +1,6 @@
 # ToolUser
 
-[![GitHub release](https://img.shields.io/github/v/release/BeautyyuYanli/tooluser?label=Version&style=flat-square)](https://github.com/BeautyyuYanli/tooluser/releases) [![Build Status](https://img.shields.io/github/actions/workflow/status/BeautyyuYanli/tooluser/publish.yaml?style=flat-square&logo=github-actions&logoColor=white)](https://github.com/BeautyyuYanli/tooluser/actions/workflows/publish.yaml) [![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=flat-square&logo=apache&logoColor=white)](https://github.com/BeautyyuYanli/tooluser/blob/main/LICENSE)
+[![GitHub release](https://img.shields.io/github/v/release/BeautyyuYanli/tooluser?label=Version&style=flat-square)](https://github.com/BeautyyuYanli/tooluser/releases) [![Build Status](https://img.shields.io/github/actions/workflow/status/BeautyyuYanli/tooluser/publish.yaml?style=flat-square&logo=github-actions&logoColor=white)](https://github.com/BeautyyuYanli/tooluser/actions/workflows/publish.yaml) [![License](https://img.shields.io/badge/License-Apache_2.0-blue?style=flat-square&logo=apache&logoColor=white)](https://github.com/BeautyyuYanli/tooluser/blob/main/LICENSE) [![Python](https://img.shields.io/badge/Python-3.10%20|%203.11%20|%203.12-blue?style=flat-square&logo=python&logoColor=white)](https://github.com/BeautyyuYanli/tooluser)
 
 Enable tool-use ability for any LLM model (DeepSeek V3/R1, etc.)
 
@@ -51,6 +51,34 @@ Yes, this library also supports streaming.
 Check out the [example_stream.py](example_stream.py) for a runnable example.
 
 (LLM output for tool using is not streamed, because we use json-repair for it.)
+
+## Raw JSON Detection (Experimental)
+
+Some LLMs occasionally forget to wrap function calls in `<tool_call>` tags and output raw JSON instead. This library can optionally detect such cases when they appear at the end of the response.
+
+```python
+from tooluser import make_tool_user
+
+# Enable raw JSON detection
+client = make_tool_user(
+    AsyncOpenAI(),
+    enable_raw_json_detection=True
+)
+```
+
+**Example scenarios that will be detected:**
+
+- `"I'll help you with that. {"name": "get_weather", "arguments": {"location": "NYC"}}"`
+- `"Let me search for that information. {"name": "search_files", "arguments": {"pattern": "*.py"}}"`
+
+**What won't be detected (to avoid false positives):**
+
+- `"Here's some data: {"name": "config", "arguments": {...}} for processing"`
+- JSON that appears in the middle of the response
+
+**Note:** This feature is disabled by default for maximum reliability. Only enable it if you're experiencing issues with LLMs that inconsistently use tool call tags.
+
+Check out the [example_raw_json.py](example_raw_json.py) for a runnable example.
 
 ## What's Hermes template?
 

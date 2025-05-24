@@ -49,4 +49,5 @@ dev = [
     "logfire>=3.14.0",
     "python-dotenv>=1.1.0",
     "pytest>=8.3.5",
+    "trio>=0.30.0",
 ]
