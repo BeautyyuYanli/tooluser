@@ -52,6 +52,34 @@ Check out the [example_stream.py](example_stream.py) for a runnable example.
 
 (LLM output for tool using is not streamed, because we use json-repair for it.)
 
+## Raw JSON Detection (Experimental)
+
+Some LLMs occasionally forget to wrap function calls in `<tool_call>` tags and output raw JSON instead. This library can optionally detect such cases when they appear at the end of the response.
+
+```python
+from tooluser import make_tool_user
+
+# Enable raw JSON detection
+client = make_tool_user(
+    AsyncOpenAI(),
+    enable_raw_json_detection=True
+)
+```
+
+**Example scenarios that will be detected:**
+
+- `"I'll help you with that. {"name": "get_weather", "arguments": {"location": "NYC"}}"`
+- `"Let me search for that information. {"name": "search_files", "arguments": {"pattern": "*.py"}}"`
+
+**What won't be detected (to avoid false positives):**
+
+- `"Here's some data: {"name": "config", "arguments": {...}} for processing"`
+- JSON that appears in the middle of the response
+
+**Note:** This feature is disabled by default for maximum reliability. Only enable it if you're experiencing issues with LLMs that inconsistently use tool call tags.
+
+Check out the [example_raw_json.py](example_raw_json.py) for a runnable example.
+
 ## What's Hermes template?
 
 Function calling is implicitly a prompt template, to make the model understand how to output the structured response as we want. Hermes template is a widely adopted prompt template for function calling.
