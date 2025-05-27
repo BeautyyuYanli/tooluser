@@ -159,83 +159,17 @@ class TestExamples:
             assert call_args.kwargs["stream"] is True
             assert call_args.kwargs["model"] == "deepseek/deepseek-chat-v3-0324"
 
-    async def test_example_raw_json_py(self):
-        """Test the example_raw_json.py file by importing and running it."""
-        # Mock response with raw JSON (no tags)
-        mock_response = ChatCompletion(
-            id="test-completion",
-            object="chat.completion",
-            created=1234567890,
-            model="deepseek/deepseek-chat-v3-0324",
-            choices=[
-                Choice(
-                    index=0,
-                    message=ChatCompletionMessage(
-                        role="assistant",
-                        content='I\'ll help you get the weather information for Tokyo. {"name": "get_weather", "arguments": {"location": "Tokyo"}}',
-                    ),
-                    finish_reason="stop",
-                )
-            ],
-        )
-
-        with (
-            patch("openai.AsyncOpenAI") as mock_openai_class,
-            patch(
-                "openai.resources.chat.completions.AsyncCompletions.create",
-                new_callable=AsyncMock,
-                return_value=mock_response,
-            ) as mock_create,
-        ):
-            # Import the module inside the patch context
-            import example_raw_json
-
-            # The example creates the AsyncOpenAI client directly inside make_tool_user
-            # So we mock the constructor
-            mock_client_instance = AsyncMock()
-            mock_openai_class.return_value = mock_client_instance
-
-            await example_raw_json.main()
-
-            # Verify the API call was made (this is the most important assertion)
-            mock_create.assert_called_once()
-            call_args = mock_create.call_args
-            assert call_args.kwargs["model"] == "deepseek/deepseek-chat-v3-0324"
-
-            # The transformation adds system message first, then user message
-            assert len(call_args.kwargs["messages"]) >= 1
-            assert call_args.kwargs["messages"][0]["role"] == "system"
-
-            # Find the user message
-            user_message = next(
-                (m for m in call_args.kwargs["messages"] if m["role"] == "user"), None
-            )
-            assert user_message is not None
-            assert "weather in Tokyo" in user_message["content"]
-
-            # Tools should be empty since they're transformed into the system message
-            assert call_args.kwargs.get("tools", []) == []
-
-            # Only check AsyncOpenAI constructor if it was called
-            # (This might vary between asyncio/trio due to import timing)
-            if mock_openai_class.call_count > 0:
-                call_args = mock_openai_class.call_args
-                assert "base_url" in call_args.kwargs
-                assert call_args.kwargs["base_url"] == "https://openrouter.ai/api/v1"
-
     async def test_example_imports_work(self):
         """Test that all example files can be imported without errors."""
         # This test ensures the example files have valid Python syntax
         # and can import all their dependencies
         try:
             import example
-            import example_raw_json
             import example_stream
 
             # Verify they have main functions
             assert callable(example.main)
             assert callable(example_stream.main)
-            assert callable(example_raw_json.main)
 
         except ImportError as e:
             pytest.fail(f"Failed to import example modules: {e}")

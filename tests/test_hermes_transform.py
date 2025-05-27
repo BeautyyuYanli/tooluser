@@ -276,9 +276,7 @@ def test_stream_processor_with_action_function_names():
 
 def test_stream_processor_unended_tool_call_tag():
     # Test that tool_call tags still take priority over raw JSON
-    processor = HermesStreamProcessor(
-        "<tool_call>", "</tool_call>"
-    )
+    processor = HermesStreamProcessor("<tool_call>", "</tool_call>")
 
     text = """I need to call a function. <tool_call>{"name": "get_weather", "arguments": {"location": "NYC"}}"""
 
@@ -289,6 +287,7 @@ def test_stream_processor_unended_tool_call_tag():
     tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
     assert len(tool_calls) == 1
     assert tool_calls[0].function.name == "get_weather"
+
 
 def test_stream_processor_prioritizes_tool_call_tags():
     # Test that tool_call tags still take priority over raw JSON
@@ -307,7 +306,6 @@ def test_stream_processor_prioritizes_tool_call_tags():
     assert len(tool_calls) == expected_call_count
     assert tool_calls[0].function.name == "tagged_call"  # Tag priority
     assert tool_calls[1].function.name == "get_weather"  # Raw JSON detected after
-
 
 
 def test_transformation_class_configuration():

@@ -140,19 +140,24 @@ def tool_result_parse(text: str) -> ChatCompletionToolMessageParam:
         "content": result_match.group(1).strip(),
     }
 
+
 # Helper functions for the processing logic
+
 
 def _is_potential_function_call_start(text: str, start_pos: int) -> bool:
     """Check if the JSON starting at start_pos looks like a function call."""
     # More restrictive pattern: double quotes only, arguments must be object/array
     remaining = text[start_pos:]
-    pattern = r'^\s*\{\s*"name"\s*:\s*"[a-zA-Z_][a-zA-Z0-9_]*"\s*,\s*"arguments"\s*:\s*[\{\[]'
+    pattern = (
+        r'^\s*\{\s*"name"\s*:\s*"[a-zA-Z_][a-zA-Z0-9_]*"\s*,\s*"arguments"\s*:\s*[\{\[]'
+    )
 
     if not re.match(pattern, remaining, re.DOTALL):
         return False
 
     # Additional heuristics to reduce false positives
     return _passes_function_call_heuristics(text, start_pos)
+
 
 def _passes_function_call_heuristics(text: str, start_pos: int) -> bool:
     """Apply additional heuristics to determine if this is likely a function call."""
@@ -166,6 +171,7 @@ def _passes_function_call_heuristics(text: str, start_pos: int) -> bool:
         return len(after_json) == 0
 
     return False
+
 
 def _find_json_end(text: str, start_pos: int) -> int:
     """Find the end of a JSON object starting at start_pos, returning the position after the closing brace."""
@@ -198,6 +204,7 @@ def _find_json_end(text: str, start_pos: int) -> int:
 
     return -1  # No matching closing brace found
 
+
 class HermesStreamProcessor(StreamProcessor):
     """Processes a stream of text, yielding tool calls and other content."""
 
@@ -220,7 +227,6 @@ class HermesStreamProcessor(StreamProcessor):
         self.in_raw_json = False
         self.enable_raw_json_detection = enable_raw_json_detection
 
-
     def process(self, chunk: str) -> list[StreamOutputType]:
         self.buffer += chunk
         outputs = []
@@ -234,9 +240,7 @@ class HermesStreamProcessor(StreamProcessor):
                 json_start_idx = -1
                 if self.enable_raw_json_detection:
                     for i in range(len(self.buffer)):
-                        if self.buffer[
-                            i
-                        ] == "{" and _is_potential_function_call_start(
+                        if self.buffer[i] == "{" and _is_potential_function_call_start(
                             self.buffer, i
                         ):
                             json_start_idx = i
@@ -327,7 +331,11 @@ class HermesTransformation(Transformation):
     enable_raw_json_detection: bool = False
 
     def create_stream_processor(self) -> StreamProcessor:
-        return HermesStreamProcessor(start_tag="<tool_call>", end_tag="</tool_call>", enable_raw_json_detection=self.enable_raw_json_detection)
+        return HermesStreamProcessor(
+            start_tag="<tool_call>",
+            end_tag="</tool_call>",
+            enable_raw_json_detection=self.enable_raw_json_detection,
+        )
 
     def trans_param_messages(
         self,
