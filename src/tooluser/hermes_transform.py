@@ -59,13 +59,7 @@ def tool_call_parse(text: str):
     tool_call_match = re.search(r"<tool_call>(.*?)</tool_call>", text, re.DOTALL)
     if tool_call_match:
         text = tool_call_match.group(1).strip()
-    else:
-        # Try to match a JSON object with name and arguments keys
-        json_match = re.search(
-            r'{\s*"name"\s*:\s*"[^"]+"\s*,\s*"arguments"\s*:', text, re.DOTALL
-        )
-        if json_match:
-            text = text.strip()
+    # If no tool_call tags, assume the text is raw JSON (since stream processor pre-filters)
 
     # Parse the JSON-formatted tool call
     try:
@@ -155,38 +149,132 @@ class HermesStreamProcessor(StreamProcessor):
     buffer_size: int
     buffer: str
     in_tool_call: bool
+    in_raw_json: bool
+    json_brace_count: int
+    enable_raw_json_detection: bool
 
-    def __init__(self, start_tag: str, end_tag: str):
+    def __init__(
+        self, start_tag: str, end_tag: str, enable_raw_json_detection: bool = False
+    ):
         self.start_tag = start_tag
         self.end_tag = end_tag
         self.buffer_size = len(start_tag)
         self.buffer = ""
         self.in_tool_call = False
+        self.in_raw_json = False
+        self.json_brace_count = 0
+        self.enable_raw_json_detection = enable_raw_json_detection
+
+    def _is_potential_function_call_start(self, text: str, start_pos: int) -> bool:
+        """Check if the JSON starting at start_pos looks like a function call."""
+        # More restrictive pattern: double quotes only, arguments must be object/array
+        remaining = text[start_pos:]
+        pattern = r'^\s*\{\s*"name"\s*:\s*"[a-zA-Z_][a-zA-Z0-9_]*"\s*,\s*"arguments"\s*:\s*[\{\[]'
+
+        if not re.match(pattern, remaining, re.DOTALL):
+            return False
+
+        # Additional heuristics to reduce false positives
+        return self._passes_function_call_heuristics(text, start_pos)
+
+    def _passes_function_call_heuristics(self, text: str, start_pos: int) -> bool:
+        """Apply additional heuristics to determine if this is likely a function call."""
+
+        # Only detect JSON that appears at the very end of the text
+        # This catches the common case where LLMs output: "I'll help with that. {JSON}"
+        json_end = self._find_json_end(text, start_pos)
+        if json_end != -1:
+            after_json = text[json_end:].strip()
+            # Must be at the end with only whitespace after
+            return len(after_json) == 0
+
+        return False
+
+    def _find_json_end(self, text: str, start_pos: int) -> int:
+        """Find the end of a JSON object starting at start_pos, returning the position after the closing brace."""
+        brace_count = 0
+        in_string = False
+        escape_next = False
+
+        for i in range(start_pos, len(text)):
+            char = text[i]
+
+            if escape_next:
+                escape_next = False
+                continue
+
+            if char == "\\":
+                escape_next = True
+                continue
+
+            if char == '"' and not escape_next:
+                in_string = not in_string
+                continue
+
+            if not in_string:
+                if char == "{":
+                    brace_count += 1
+                elif char == "}":
+                    brace_count -= 1
+                    if brace_count == 0:
+                        return i + 1
+
+        return -1  # No matching closing brace found
 
     def process(self, chunk: str) -> list[StreamOutputType]:
         self.buffer += chunk
         outputs = []
+
         while True:
-            if not self.in_tool_call:
+            if not self.in_tool_call and not self.in_raw_json:
+                # Look for tool_call tags first (higher priority)
                 start_idx = self.buffer.find(self.start_tag)
-                if start_idx == -1:
-                    # No tool call start found, yield everything up to the last BUFFER_SIZE characters
-                    if len(self.buffer) > self.buffer_size:
-                        output = self.buffer[: -self.buffer_size]
-                        self.buffer = self.buffer[-self.buffer_size :]
-                        outputs.append(output)
-                        continue
-                    else:
-                        break
-                else:
-                    # Found start of tool call
+
+                # Look for potential raw JSON function calls (only if enabled)
+                json_start_idx = -1
+                if self.enable_raw_json_detection:
+                    for i in range(len(self.buffer)):
+                        if self.buffer[
+                            i
+                        ] == "{" and self._is_potential_function_call_start(
+                            self.buffer, i
+                        ):
+                            json_start_idx = i
+                            break
+
+                # Decide which pattern to follow
+                if start_idx != -1 and (
+                    json_start_idx == -1 or start_idx < json_start_idx
+                ):
+                    # Found tool_call tag first or only tool_call tag
                     output = self.buffer[:start_idx]
                     self.buffer = self.buffer[start_idx:]
                     self.in_tool_call = True
+                    if output:
+                        outputs.append(output)
+                    continue
+
+                elif json_start_idx != -1:
+                    # Found potential raw JSON function call
+                    output = self.buffer[:json_start_idx]
+                    self.buffer = self.buffer[json_start_idx:]
+                    self.in_raw_json = True
+                    self.json_brace_count = 0
+                    if output:
+                        outputs.append(output)
+                    continue
+
+                # No patterns found, yield everything up to the last BUFFER_SIZE characters
+                elif len(self.buffer) > self.buffer_size:
+                    output = self.buffer[: -self.buffer_size]
+                    self.buffer = self.buffer[-self.buffer_size :]
                     outputs.append(output)
                     continue
-            else:
-                # In tool call
+                else:
+                    break
+
+            elif self.in_tool_call:
+                # In tool call, look for end tag
                 end_idx = self.buffer.find(self.end_tag)
                 if end_idx == -1:
                     break
@@ -194,13 +282,44 @@ class HermesStreamProcessor(StreamProcessor):
                     output = self.buffer[: end_idx + len(self.end_tag)]
                     self.buffer = self.buffer[end_idx + len(self.end_tag) :]
                     self.in_tool_call = False
-                    outputs.append(tool_call_parse(output))
+                    try:
+                        outputs.append(tool_call_parse(output))
+                    except Exception:
+                        # If parsing fails, treat as regular text
+                        outputs.append(output)
                     continue
+
+            elif self.in_raw_json:
+                # In raw JSON, look for the end of the JSON object
+                json_end = self._find_json_end(self.buffer, 0)
+                if json_end == -1:
+                    # Haven't found the end yet, need more data
+                    break
+                else:
+                    output = self.buffer[:json_end]
+                    self.buffer = self.buffer[json_end:]
+                    self.in_raw_json = False
+                    self.json_brace_count = 0
+                    try:
+                        # Try to parse as function call
+                        parsed_call = tool_call_parse(output)
+                        outputs.append(parsed_call)
+                    except Exception:
+                        # If parsing fails, treat as regular text
+                        outputs.append(output)
+                    continue
+
         return outputs
 
     def finalize(self) -> StreamOutputType:
         if self.in_tool_call:
             try:
+                return tool_call_parse(self.buffer)
+            except Exception:
+                return self.buffer
+        elif self.in_raw_json and self.enable_raw_json_detection:
+            try:
+                # Try to parse the remaining JSON
                 return tool_call_parse(self.buffer)
             except Exception:
                 return self.buffer
@@ -212,9 +331,19 @@ class HermesTransformation(Transformation):
     """Transform tool_use API call to a user prompt, in Hermes template format.
     ref: https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct/blob/main/tokenizer_config.json#L198"""
 
+    def __init__(self, enable_raw_json_detection: bool = False):
+        self.enable_raw_json_detection = enable_raw_json_detection
+
     @classmethod
     def create_stream_processor(cls) -> StreamProcessor:
         return HermesStreamProcessor(start_tag="<tool_call>", end_tag="</tool_call>")
+
+    def create_stream_processor_instance(self) -> StreamProcessor:
+        return HermesStreamProcessor(
+            start_tag="<tool_call>",
+            end_tag="</tool_call>",
+            enable_raw_json_detection=self.enable_raw_json_detection,
+        )
 
     def trans_param_messages(
         self,
@@ -261,23 +390,23 @@ class HermesTransformation(Transformation):
 
     def trans_completion_message(
         self,
-        completion: ChatCompletionMessage,
+        message: ChatCompletionMessage,
     ) -> ChatCompletionMessage:
-        processor = self.__class__.create_stream_processor()
-        if completion.content is not None:
+        processor = self.create_stream_processor_instance()
+        if message.content is not None:
             tool_calls: List[ChatCompletionMessageToolCall] = []
             output_content = ""
-            outputs = processor.process(completion.content)
+            outputs = processor.process(message.content)
             outputs.append(processor.finalize())
             for output in outputs:
                 if isinstance(output, ChatCompletionMessageToolCall):
                     tool_calls.append(output)
                 else:
                     output_content += output
-            completion.content = output_content
+            message.content = output_content
             if tool_calls:
-                completion.tool_calls = tool_calls
-        return completion
+                message.tool_calls = tool_calls
+        return message
 
     def trans_completion_message_stream(
         self,
