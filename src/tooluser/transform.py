@@ -1,4 +1,4 @@
-from typing import Iterable, Protocol, Union
+from typing import Iterable, Protocol, Sequence, Union
 
 from openai.types.chat import (
     ChatCompletionMessage,
@@ -13,7 +13,7 @@ StreamOutputType = Union[str, ChatCompletionMessageToolCall]
 
 class StreamProcessor(Protocol):
     def process(self, chunk: str) -> list[StreamOutputType]: ...
-    def finalize(self) -> StreamOutputType: ...
+    def finalize(self) -> Sequence[StreamOutputType]: ...
 
 
 class Transformation(Protocol):

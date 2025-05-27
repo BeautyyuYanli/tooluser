@@ -2,7 +2,7 @@ import json
 import re
 import uuid
 from dataclasses import dataclass
-from typing import Iterable, List
+from typing import Iterable, List, Sequence
 
 from jinja2 import Template
 from json_repair import repair_json
@@ -42,6 +42,7 @@ Here is an example of a tool call:
 {"name": "get_weather", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
 </tool_call>
 
+IMPORTANT: Ensure each tool call is individually enclosed in its own <tool_call> </tool_call> tags. If you are making multiple tool calls, each must have its own pair of these tags. All tool calls must be placed at the VERY END of your response, and no text should follow the final </tool_call> tag.
 </tool_instruction>
 """
     return Template(tools_template).render(
@@ -55,37 +56,47 @@ Here is an example of a tool call:
     )
 
 
-def tool_call_parse(text: str):
-    # First check if the text is wrapped in tool_call tags
-    tool_call_match = re.search(r"<tool_call>(.*?)</tool_call>", text, re.DOTALL)
-    if tool_call_match:
-        text = tool_call_match.group(1).strip()
+def tool_call_parse(text: str) -> list[ChatCompletionMessageToolCall]:
+    text = text.strip()
+    # Remove all <tool_call> and </tool_call> tags if they exist
+    start_tag = "<tool_call>"
+    end_tag = "</tool_call>"
+    while text[:len(start_tag)] == start_tag:
+        text = text[len(start_tag) :].strip()
+    while text[-len(end_tag):] == end_tag:
+        text = text[: -len(end_tag)].strip()
+    # Make them be list
+    text = '[' + text + ']'
 
     # Parse the JSON-formatted tool call
     try:
-        tool_call_data: dict = repair_json(text, return_objects=True)  # type: ignore
+        tool_call_data: list[dict] = repair_json(text, return_objects=True)  # type: ignore
     except Exception as e:
         raise ValueError("Invalid tool call format - must be valid JSON") from e
 
     # Check if the parsed data has the required structure for a function call
-    if not isinstance(tool_call_data, dict) or not all(
-        key in tool_call_data for key in ["name", "arguments"]
+    if not isinstance(tool_call_data, list) or not all(
+        isinstance(tool_call, dict) and key in tool_call  
+        for key in ["name", "arguments"]
+        for tool_call in tool_call_data
     ):
         raise ValueError("Invalid tool call format - missing required fields")
 
     try:
         # Create a Function object
-        function = Function(
-            name=tool_call_data["name"],
-            arguments=json.dumps(tool_call_data["arguments"], ensure_ascii=False),
-        )
+        functions = [Function(
+                name=tool_call["name"],
+                arguments=json.dumps(tool_call["arguments"], ensure_ascii=False),
+            )
+            for tool_call in tool_call_data
+        ]
 
         # Create and return a ChatCompletionMessageToolCall
-        return ChatCompletionMessageToolCall(
+        return [ChatCompletionMessageToolCall(
             id="tool_" + function.name + "_" + uuid.uuid4().hex[:8],
             function=function,
             type="function",
-        )
+        ) for function in functions]
     except KeyError as e:
         raise ValueError("Invalid tool call format - missing required fields") from e
 
@@ -229,7 +240,7 @@ class HermesStreamProcessor(StreamProcessor):
 
     def process(self, chunk: str) -> list[StreamOutputType]:
         self.buffer += chunk
-        outputs = []
+        outputs: list[StreamOutputType] = []
 
         while True:
             if not self.in_tool_call and not self.in_raw_json:
@@ -252,7 +263,7 @@ class HermesStreamProcessor(StreamProcessor):
                 ):
                     # Found tool_call tag first or only tool_call tag
                     output = self.buffer[:start_idx]
-                    self.buffer = self.buffer[start_idx:]
+                    self.buffer = self.buffer[start_idx + len(self.start_tag):]
                     self.in_tool_call = True
                     if output:
                         outputs.append(output)
@@ -278,18 +289,34 @@ class HermesStreamProcessor(StreamProcessor):
 
             elif self.in_tool_call:
                 # In tool call, look for end tag
+                start_idx = self.buffer.find(self.start_tag)
                 end_idx = self.buffer.find(self.end_tag)
-                if end_idx == -1:
-                    break
+                # If continue multiple tool calls, we should allow for start_tag
+                # <tool_call> {"name": "tool_1", ...} <tool_call> {"name": "tool_2", ...} </tool_call>
+                # <tool_call> {"name": "tool_1", ...} </tool_call> <tool_call> {"name": "tool_2", ...} </tool_call>
+                if end_idx != -1 and (start_idx == -1 or end_idx < start_idx):
+                    output_idx = end_idx
+                    output_idx_end = end_idx + len(self.end_tag)
+                    normal_close = True
+                elif start_idx != -1:
+                    output_idx = start_idx
+                    output_idx_end = start_idx + len(self.start_tag)
+                    normal_close = False
                 else:
-                    output = self.buffer[: end_idx + len(self.end_tag)]
-                    self.buffer = self.buffer[end_idx + len(self.end_tag) :]
-                    self.in_tool_call = False
+                    break
+
+                if end_idx != -1 or start_idx != -1:
+                    output = self.buffer[: output_idx]
+                    self.buffer = self.buffer[output_idx_end:]
                     try:
-                        outputs.append(tool_call_parse(output))
+                        outputs.extend(tool_call_parse(output))
                     except Exception:
                         # If parsing fails, treat as regular text
                         outputs.append(output)
+
+
+                    if normal_close:
+                        self.in_tool_call = False
                     continue
 
             elif self.in_raw_json:
@@ -305,7 +332,7 @@ class HermesStreamProcessor(StreamProcessor):
                     try:
                         # Try to parse as function call
                         parsed_call = tool_call_parse(output)
-                        outputs.append(parsed_call)
+                        outputs.extend(parsed_call)
                     except Exception:
                         # If parsing fails, treat as regular text
                         outputs.append(output)
@@ -313,14 +340,14 @@ class HermesStreamProcessor(StreamProcessor):
 
         return outputs
 
-    def finalize(self) -> StreamOutputType:
+    def finalize(self) -> Sequence[StreamOutputType]:
         if self.in_tool_call or self.in_raw_json:
             try:
                 return tool_call_parse(self.buffer)
             except Exception:
-                return self.buffer
+                return [self.buffer]
         else:
-            return self.buffer
+            return [self.buffer]
 
 
 @dataclass
@@ -389,7 +416,7 @@ class HermesTransformation(Transformation):
             tool_calls: List[ChatCompletionMessageToolCall] = []
             output_content = ""
             outputs = processor.process(message.content)
-            outputs.append(processor.finalize())
+            outputs.extend(processor.finalize())
             for output in outputs:
                 if isinstance(output, ChatCompletionMessageToolCall):
                     tool_calls.append(output)
@@ -411,7 +438,7 @@ class HermesTransformation(Transformation):
                 raise ValueError("Delta content is None but finalize is False")
             outputs = processor.process(delta.content)
         else:
-            outputs = [processor.finalize()]
+            outputs = processor.finalize()
         tool_calls: list[ChatCompletionMessageToolCall] = []
         content = ""
         for output in outputs:

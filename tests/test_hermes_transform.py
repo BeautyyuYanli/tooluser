@@ -20,7 +20,7 @@ def test_tool_call_parse_with_tags():
     }
     </tool_call>"""
 
-    result = tool_call_parse(text)
+    result = tool_call_parse(text)[-1]
     assert isinstance(result, ChatCompletionMessageToolCall)
     assert result.type == "function"
     assert result.function.name == "get_weather"
@@ -42,7 +42,7 @@ def test_tool_call_parse_with_tags_broken_json():
     }
     </tool_call>"""
 
-    result = tool_call_parse(text)
+    result = tool_call_parse(text)[-1]
     assert isinstance(result, ChatCompletionMessageToolCall)
     assert result.type == "function"
     assert result.function.name == "get_weather"
@@ -62,7 +62,7 @@ def test_tool_call_parse_without_tags():
         }
     }"""
 
-    result = tool_call_parse(text)
+    result = tool_call_parse(text)[-1]
     assert isinstance(result, ChatCompletionMessageToolCall)
     assert result.type == "function"
     assert result.function.name == "get_weather"
@@ -82,7 +82,7 @@ def test_tool_call_parse_without_tags_broken_json():
         }
     }"""
 
-    result = tool_call_parse(text)
+    result = tool_call_parse(text)[-1]
     assert isinstance(result, ChatCompletionMessageToolCall)
     assert result.type == "function"
     assert result.function.name == "get_weather"
@@ -102,7 +102,7 @@ def test_tool_call_parse_with_invalid_json():
         }
     """  # Missing closing brace
 
-    result = tool_call_parse(text)
+    result = tool_call_parse(text)[-1]
     assert isinstance(result, ChatCompletionMessageToolCall)
     assert result.type == "function"
     assert result.function.name == "get_weather"
@@ -145,7 +145,7 @@ def test_tool_call_parse_with_extra_fields():
         "extra_field": "should be ignored"
     }"""
 
-    result = tool_call_parse(text)
+    result = tool_call_parse(text)[-1]
     assert isinstance(result, ChatCompletionMessageToolCall)
     assert result.type == "function"
     assert result.function.name == "get_weather"
@@ -165,7 +165,7 @@ def test_stream_processor_raw_json_disabled_by_default():
     )
 
     outputs = processor.process(text)
-    outputs.append(processor.finalize())
+    outputs.extend(processor.finalize())
 
     # Should be treated as all text, no tool calls
     tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
@@ -188,7 +188,7 @@ def test_stream_processor_with_raw_json_enabled():
     )
 
     outputs = processor.process(text)
-    outputs.append(processor.finalize())
+    outputs.extend(processor.finalize())
 
     # Check that we have the expected content
     text_parts = [o for o in outputs if isinstance(o, str)]
@@ -209,7 +209,7 @@ def test_stream_processor_thinking_aloud():
 {"name": "get_weather", "arguments": {"location": "San Francisco"}}"""
 
     outputs = processor.process(text)
-    outputs.append(processor.finalize())
+    outputs.extend(processor.finalize())
 
     text_parts = [o for o in outputs if isinstance(o, str)]
     tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
@@ -230,7 +230,7 @@ def test_stream_processor_avoids_false_positives():
     text = """Here's some user data: {"name": "config_data", "arguments": {"port": 8080, "host": "localhost"}} that we need to process further."""
 
     outputs = processor.process(text)
-    outputs.append(processor.finalize())
+    outputs.extend(processor.finalize())
 
     # Should be treated as all text, no tool calls
     tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
@@ -251,7 +251,7 @@ def test_stream_processor_function_at_end():
     text = """The user wants weather information. {"name": "get_weather", "arguments": {"location": "Boston"}}"""
 
     outputs = processor.process(text)
-    outputs.append(processor.finalize())
+    outputs.extend(processor.finalize())
 
     tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
     assert len(tool_calls) == 1
@@ -267,7 +267,7 @@ def test_stream_processor_with_action_function_names():
     text = """{"name": "search_files", "arguments": {"pattern": "*.py"}}"""
 
     outputs = processor.process(text)
-    outputs.append(processor.finalize())
+    outputs.extend(processor.finalize())
 
     tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
     assert len(tool_calls) == 1
@@ -281,7 +281,7 @@ def test_stream_processor_unended_tool_call_tag():
     text = """I need to call a function. <tool_call>{"name": "get_weather", "arguments": {"location": "NYC"}}"""
 
     outputs = processor.process(text)
-    outputs.append(processor.finalize())
+    outputs.extend(processor.finalize())
 
     # Should find both calls, but tagged one should come first
     tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
@@ -298,7 +298,7 @@ def test_stream_processor_prioritizes_tool_call_tags():
     text = """I need to call a function. <tool_call>{"name": "tagged_call", "arguments": {}}</tool_call> {"name": "get_weather", "arguments": {"location": "NYC"}}"""
 
     outputs = processor.process(text)
-    outputs.append(processor.finalize())
+    outputs.extend(processor.finalize())
 
     # Should find both calls, but tagged one should come first
     tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
@@ -344,3 +344,67 @@ def test_transformation_class_default_behavior():
     # Should NOT have extracted the tool call
     assert result.tool_calls is None
     assert result.content is not None and "get_weather" in result.content
+
+
+def test_multiple_tool_calls_unclosed_tag():
+    processor = HermesStreamProcessor("<tool_call>", "</tool_call>")
+    text = """<tool_call>
+{"name": "tool_1", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
+{"name": "tool_2", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}"""
+    outputs = processor.process(text)
+    outputs.extend(processor.finalize())
+
+    tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
+    assert len(tool_calls) == 2
+    assert tool_calls[0].function.name == "tool_1"
+    assert tool_calls[1].function.name == "tool_2"
+
+
+def test_multiple_tool_calls_closed_tag():
+    processor = HermesStreamProcessor("<tool_call>", "</tool_call>")
+    text = """<tool_call>
+{"name": "tool_1", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
+{"name": "tool_2", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
+</tool_call>"""
+    outputs = processor.process(text)
+    outputs.extend(processor.finalize())
+
+    tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
+    assert len(tool_calls) == 2
+    assert tool_calls[0].function.name == "tool_1"
+    assert tool_calls[1].function.name == "tool_2"
+
+
+def test_nested_tool_calls_closed_inner_tag():
+    processor = HermesStreamProcessor("<tool_call>", "</tool_call>")
+    text = """<tool_call>
+{"name": "tool_1", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
+<tool_call>
+{"name": "tool_2", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
+</tool_call>"""
+    outputs = processor.process(text)
+    outputs.extend(processor.finalize())
+
+    tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
+    assert len(tool_calls) == 2
+    assert tool_calls[0].function.name == "tool_1"
+    assert tool_calls[1].function.name == "tool_2"
+
+
+def test_nested_tool_calls_unclosed_tags():
+    processor = HermesStreamProcessor("<tool_call>", "</tool_call>")
+    text = """<tool_call>
+{"name": "tool_1", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
+<tool_call>
+{"name": "tool_2", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
+{"name": "tool_3", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
+"""
+    outputs = processor.process(text)
+    outputs.extend(processor.finalize())
+
+    tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
+    assert len(tool_calls) == 3
+    assert tool_calls[0].function.name == "tool_1"
+    assert tool_calls[1].function.name == "tool_2"
+    assert tool_calls[2].function.name == "tool_3"
+
