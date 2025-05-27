@@ -17,10 +17,7 @@ class StreamProcessor(Protocol):
 
 
 class Transformation(Protocol):
-    @classmethod
-    def create_stream_processor(cls) -> StreamProcessor: ...
-
-    def create_stream_processor_instance(self) -> StreamProcessor: ...
+    def create_stream_processor(self) -> StreamProcessor: ...
 
     def trans_param_messages(
         self,

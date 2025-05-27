@@ -1,6 +1,7 @@
 import json
 import re
 import uuid
+from dataclasses import dataclass
 from typing import Iterable, List
 
 from jinja2 import Template
@@ -140,6 +141,63 @@ def tool_result_parse(text: str) -> ChatCompletionToolMessageParam:
         "content": result_match.group(1).strip(),
     }
 
+# Helper functions for the processing logic
+
+def _is_potential_function_call_start(text: str, start_pos: int) -> bool:
+    """Check if the JSON starting at start_pos looks like a function call."""
+    # More restrictive pattern: double quotes only, arguments must be object/array
+    remaining = text[start_pos:]
+    pattern = r'^\s*\{\s*"name"\s*:\s*"[a-zA-Z_][a-zA-Z0-9_]*"\s*,\s*"arguments"\s*:\s*[\{\[]'
+
+    if not re.match(pattern, remaining, re.DOTALL):
+        return False
+
+    # Additional heuristics to reduce false positives
+    return _passes_function_call_heuristics(text, start_pos)
+
+def _passes_function_call_heuristics(text: str, start_pos: int) -> bool:
+    """Apply additional heuristics to determine if this is likely a function call."""
+
+    # Only detect JSON that appears at the very end of the text
+    # This catches the common case where LLMs output: "I'll help with that. {JSON}"
+    json_end = _find_json_end(text, start_pos)
+    if json_end != -1:
+        after_json = text[json_end:].strip()
+        # Must be at the end with only whitespace after
+        return len(after_json) == 0
+
+    return False
+
+def _find_json_end(text: str, start_pos: int) -> int:
+    """Find the end of a JSON object starting at start_pos, returning the position after the closing brace."""
+    brace_count = 0
+    in_string = False
+    escape_next = False
+
+    for i in range(start_pos, len(text)):
+        char = text[i]
+
+        if escape_next:
+            escape_next = False
+            continue
+
+        if char == "\\":
+            escape_next = True
+            continue
+
+        if char == '"' and not escape_next:
+            in_string = not in_string
+            continue
+
+        if not in_string:
+            if char == "{":
+                brace_count += 1
+            elif char == "}":
+                brace_count -= 1
+                if brace_count == 0:
+                    return i + 1
+
+    return -1  # No matching closing brace found
 
 class HermesStreamProcessor(StreamProcessor):
     """Processes a stream of text, yielding tool calls and other content."""
@@ -150,7 +208,6 @@ class HermesStreamProcessor(StreamProcessor):
     buffer: str
     in_tool_call: bool
     in_raw_json: bool
-    json_brace_count: int
     enable_raw_json_detection: bool
 
     def __init__(
@@ -162,64 +219,8 @@ class HermesStreamProcessor(StreamProcessor):
         self.buffer = ""
         self.in_tool_call = False
         self.in_raw_json = False
-        self.json_brace_count = 0
         self.enable_raw_json_detection = enable_raw_json_detection
 
-    def _is_potential_function_call_start(self, text: str, start_pos: int) -> bool:
-        """Check if the JSON starting at start_pos looks like a function call."""
-        # More restrictive pattern: double quotes only, arguments must be object/array
-        remaining = text[start_pos:]
-        pattern = r'^\s*\{\s*"name"\s*:\s*"[a-zA-Z_][a-zA-Z0-9_]*"\s*,\s*"arguments"\s*:\s*[\{\[]'
-
-        if not re.match(pattern, remaining, re.DOTALL):
-            return False
-
-        # Additional heuristics to reduce false positives
-        return self._passes_function_call_heuristics(text, start_pos)
-
-    def _passes_function_call_heuristics(self, text: str, start_pos: int) -> bool:
-        """Apply additional heuristics to determine if this is likely a function call."""
-
-        # Only detect JSON that appears at the very end of the text
-        # This catches the common case where LLMs output: "I'll help with that. {JSON}"
-        json_end = self._find_json_end(text, start_pos)
-        if json_end != -1:
-            after_json = text[json_end:].strip()
-            # Must be at the end with only whitespace after
-            return len(after_json) == 0
-
-        return False
-
-    def _find_json_end(self, text: str, start_pos: int) -> int:
-        """Find the end of a JSON object starting at start_pos, returning the position after the closing brace."""
-        brace_count = 0
-        in_string = False
-        escape_next = False
-
-        for i in range(start_pos, len(text)):
-            char = text[i]
-
-            if escape_next:
-                escape_next = False
-                continue
-
-            if char == "\\":
-                escape_next = True
-                continue
-
-            if char == '"' and not escape_next:
-                in_string = not in_string
-                continue
-
-            if not in_string:
-                if char == "{":
-                    brace_count += 1
-                elif char == "}":
-                    brace_count -= 1
-                    if brace_count == 0:
-                        return i + 1
-
-        return -1  # No matching closing brace found
 
     def process(self, chunk: str) -> list[StreamOutputType]:
         self.buffer += chunk
@@ -236,7 +237,7 @@ class HermesStreamProcessor(StreamProcessor):
                     for i in range(len(self.buffer)):
                         if self.buffer[
                             i
-                        ] == "{" and self._is_potential_function_call_start(
+                        ] == "{" and _is_potential_function_call_start(
                             self.buffer, i
                         ):
                             json_start_idx = i
@@ -259,7 +260,6 @@ class HermesStreamProcessor(StreamProcessor):
                     output = self.buffer[:json_start_idx]
                     self.buffer = self.buffer[json_start_idx:]
                     self.in_raw_json = True
-                    self.json_brace_count = 0
                     if output:
                         outputs.append(output)
                     continue
@@ -291,7 +291,7 @@ class HermesStreamProcessor(StreamProcessor):
 
             elif self.in_raw_json:
                 # In raw JSON, look for the end of the JSON object
-                json_end = self._find_json_end(self.buffer, 0)
+                json_end = _find_json_end(self.buffer, 0)
                 if json_end == -1:
                     # Haven't found the end yet, need more data
                     break
@@ -299,7 +299,6 @@ class HermesStreamProcessor(StreamProcessor):
                     output = self.buffer[:json_end]
                     self.buffer = self.buffer[json_end:]
                     self.in_raw_json = False
-                    self.json_brace_count = 0
                     try:
                         # Try to parse as function call
                         parsed_call = tool_call_parse(output)
@@ -327,23 +326,15 @@ class HermesStreamProcessor(StreamProcessor):
             return self.buffer
 
 
+@dataclass
 class HermesTransformation(Transformation):
     """Transform tool_use API call to a user prompt, in Hermes template format.
     ref: https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct/blob/main/tokenizer_config.json#L198"""
 
-    def __init__(self, enable_raw_json_detection: bool = False):
-        self.enable_raw_json_detection = enable_raw_json_detection
+    enable_raw_json_detection: bool = False
 
-    @classmethod
-    def create_stream_processor(cls) -> StreamProcessor:
-        return HermesStreamProcessor(start_tag="<tool_call>", end_tag="</tool_call>")
-
-    def create_stream_processor_instance(self) -> StreamProcessor:
-        return HermesStreamProcessor(
-            start_tag="<tool_call>",
-            end_tag="</tool_call>",
-            enable_raw_json_detection=self.enable_raw_json_detection,
-        )
+    def create_stream_processor(self) -> StreamProcessor:
+        return HermesStreamProcessor(start_tag="<tool_call>", end_tag="</tool_call>", enable_raw_json_detection=self.enable_raw_json_detection)
 
     def trans_param_messages(
         self,
@@ -392,7 +383,7 @@ class HermesTransformation(Transformation):
         self,
         message: ChatCompletionMessage,
     ) -> ChatCompletionMessage:
-        processor = self.create_stream_processor_instance()
+        processor = self.create_stream_processor()
         if message.content is not None:
             tool_calls: List[ChatCompletionMessageToolCall] = []
             output_content = ""

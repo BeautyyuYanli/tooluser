@@ -1,21 +1,14 @@
+from functools import wraps
 from typing import (
     AsyncIterable,
     AsyncIterator,
-    Iterable,
-    Literal,
-    Optional,
-    Union,
-    overload,
 )
 
 from openai import AsyncOpenAI
 from openai._streaming import AsyncStream
-from openai._types import NOT_GIVEN, NotGiven
-from openai._utils import required_args
 from openai.resources.chat.completions import AsyncCompletions
 from openai.types.chat.chat_completion import ChatCompletion
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
-from openai.types.chat.chat_completion_message_param import ChatCompletionMessageParam
 from typing_extensions import Self
 
 from tooluser.hermes_transform import HermesTransformation
@@ -59,38 +52,8 @@ def make_tool_user(
             self._client = client
             super().__init__(client)
 
-        @overload
-        async def create(
-            self,
-            *,
-            messages: Iterable[ChatCompletionMessageParam],
-            model: Union[str, object],
-            stream: Optional[Literal[False]] | NotGiven = NOT_GIVEN,
-            **kwargs,
-        ) -> ChatCompletion: ...
-
-        @overload
-        async def create(
-            self,
-            *,
-            messages: Iterable[ChatCompletionMessageParam],
-            model: Union[str, object],
-            stream: Literal[True],
-            **kwargs,
-        ) -> _AsyncStreamLike: ...
-
-        @overload
-        async def create(
-            self,
-            *,
-            messages: Iterable[ChatCompletionMessageParam],
-            model: Union[str, object],
-            stream: bool,
-            **kwargs,
-        ) -> ChatCompletion | _AsyncStreamLike: ...
-
-        @required_args(["messages", "model"], ["messages", "model", "stream"])
-        async def create(self, *args, **kwargs):
+        @wraps(AsyncCompletions.create)
+        async def create(self, *args, **kwargs) -> ChatCompletion | _AsyncStreamLike:
             messages = kwargs.get("messages", [])
             tools = kwargs.pop("tools", [])
             stream = kwargs.get("stream", False)
@@ -116,7 +79,7 @@ def make_tool_user(
                         for idx, choice in enumerate(chunk.choices):
                             if idx not in processors:
                                 processors[idx] = (
-                                    transformation.create_stream_processor_instance()
+                                    transformation.create_stream_processor()
                                 )
                             if choice.delta.content is not None:
                                 if choice.finish_reason is None:
