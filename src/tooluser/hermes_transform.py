@@ -160,7 +160,7 @@ def tool_result_parse(text: str) -> ChatCompletionToolMessageParam:
 
 
 def _is_potential_function_call_start(text: str, start_pos: int) -> bool:
-    """Check if the JSON starting at start_pos looks like a function call."""
+    """Check if the JSON starting at start_pos looks like a function call. Works for only non-stream mode."""
     # More restrictive pattern: double quotes only, arguments must be object/array
     remaining = text[start_pos:]
     pattern = (
@@ -175,7 +175,7 @@ def _is_potential_function_call_start(text: str, start_pos: int) -> bool:
 
 
 def _passes_function_call_heuristics(text: str, start_pos: int) -> bool:
-    """Apply additional heuristics to determine if this is likely a function call."""
+    """Apply additional heuristics to determine if this is likely a function call. Works for only non-stream mode."""
 
     # Only detect JSON that appears at the very end of the text
     # This catches the common case where LLMs output: "I'll help with that. {JSON}"
@@ -183,7 +183,12 @@ def _passes_function_call_heuristics(text: str, start_pos: int) -> bool:
     if json_end != -1:
         after_json = text[json_end:].strip()
         # Must be at the end with only whitespace after
-        return len(after_json) == 0
+        return (
+            len(after_json) == 0
+            or after_json.startswith("</tool_call>")
+            or after_json.startswith("<tool_call>")
+            or _is_potential_function_call_start(after_json, 0)
+        )
 
     return False
 
@@ -330,7 +335,9 @@ class HermesStreamProcessor(StreamProcessor):
                     break
                 else:
                     output = self.buffer[:json_end]
-                    self.buffer = self.buffer[json_end:]
+                    self.buffer = self.buffer[json_end:].strip()
+                    if self.buffer.startswith("</tool_call>"):
+                        self.buffer = self.buffer[len("</tool_call>") :]
                     self.in_raw_json = False
                     try:
                         # Try to parse as function call

@@ -434,3 +434,31 @@ def test_nested_tool_calls_unclosed_tags():
     assert tool_calls[0].function.name == "tool_1"
     assert tool_calls[1].function.name == "tool_2"
     assert tool_calls[2].function.name == "tool_3"
+
+
+def test_mixed_tool_calls_closed_tag_then_raw_json():
+    processor = HermesStreamProcessor(
+        "<tool_call>", "</tool_call>", enable_raw_json_detection=True
+    )
+    text = """
+{"name": "tool_1", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
+</tool_call>
+{"name": "tool_2", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
+{"name": "tool_3", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
+"""
+    outputs = processor.process(text)
+    outputs.extend(processor.finalize())
+
+    tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
+    assert len(tool_calls) == 3  # noqa: PLR2004
+    assert tool_calls[0].function.name == "tool_1"
+    assert tool_calls[1].function.name == "tool_2"
+    assert tool_calls[2].function.name == "tool_3"
+
+
+"""
+{"name": "tool_1", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
+</tool_call>
+{"name": "tool_2", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
+{"name": "tool_3", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
+"""
