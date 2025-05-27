@@ -39,8 +39,16 @@ class _AsyncStreamLike(AsyncStream[ChatCompletionChunk]):
 def make_tool_user(
     client: AsyncOpenAI,
     transformation: Transformation | None = None,
-    enable_raw_json_detection: bool = False,
+    enable_raw_json_detection: bool = True,
 ):
+    """This function is a wrapper around the AsyncOpenAI client that adds tool use support.
+    It replaces the chat.completions.create method with a new method that applies the transformation to the messages and tools.
+
+    Args:
+        client: The AsyncOpenAI client to wrap.
+        transformation: The transformation to apply to the messages and tools. Default to HermesTransformation.
+        enable_raw_json_detection: Whether to detect raw JSON without <tool_call> tag at the end of the response. Default to True.
+    """
     if transformation is None:
         transformation = HermesTransformation(
             enable_raw_json_detection=enable_raw_json_detection

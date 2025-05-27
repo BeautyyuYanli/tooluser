@@ -60,7 +60,6 @@ def tool_call_parse(text: str):
     tool_call_match = re.search(r"<tool_call>(.*?)</tool_call>", text, re.DOTALL)
     if tool_call_match:
         text = tool_call_match.group(1).strip()
-    # If no tool_call tags, assume the text is raw JSON (since stream processor pre-filters)
 
     # Parse the JSON-formatted tool call
     try:
@@ -311,14 +310,8 @@ class HermesStreamProcessor(StreamProcessor):
         return outputs
 
     def finalize(self) -> StreamOutputType:
-        if self.in_tool_call:
+        if self.in_tool_call or self.in_raw_json:
             try:
-                return tool_call_parse(self.buffer)
-            except Exception:
-                return self.buffer
-        elif self.in_raw_json and self.enable_raw_json_detection:
-            try:
-                # Try to parse the remaining JSON
                 return tool_call_parse(self.buffer)
             except Exception:
                 return self.buffer
