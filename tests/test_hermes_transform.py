@@ -355,7 +355,7 @@ def test_multiple_tool_calls_unclosed_tag():
     outputs.extend(processor.finalize())
 
     tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
-    assert len(tool_calls) == 2
+    assert len(tool_calls) == 2  # noqa: PLR2004
     assert tool_calls[0].function.name == "tool_1"
     assert tool_calls[1].function.name == "tool_2"
 
@@ -370,7 +370,7 @@ def test_multiple_tool_calls_closed_tag():
     outputs.extend(processor.finalize())
 
     tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
-    assert len(tool_calls) == 2
+    assert len(tool_calls) == 2  # noqa: PLR2004
     assert tool_calls[0].function.name == "tool_1"
     assert tool_calls[1].function.name == "tool_2"
 
@@ -386,7 +386,7 @@ def test_nested_tool_calls_closed_inner_tag():
     outputs.extend(processor.finalize())
 
     tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
-    assert len(tool_calls) == 2
+    assert len(tool_calls) == 2  # noqa: PLR2004
     assert tool_calls[0].function.name == "tool_1"
     assert tool_calls[1].function.name == "tool_2"
 
@@ -403,8 +403,7 @@ def test_nested_tool_calls_unclosed_tags():
     outputs.extend(processor.finalize())
 
     tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
-    assert len(tool_calls) == 3
+    assert len(tool_calls) == 3  # noqa: PLR2004
     assert tool_calls[0].function.name == "tool_1"
     assert tool_calls[1].function.name == "tool_2"
     assert tool_calls[2].function.name == "tool_3"
-

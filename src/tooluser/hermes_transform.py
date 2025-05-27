@@ -61,12 +61,12 @@ def tool_call_parse(text: str) -> list[ChatCompletionMessageToolCall]:
     # Remove all <tool_call> and </tool_call> tags if they exist
     start_tag = "<tool_call>"
     end_tag = "</tool_call>"
-    while text[:len(start_tag)] == start_tag:
+    while text[: len(start_tag)] == start_tag:
         text = text[len(start_tag) :].strip()
-    while text[-len(end_tag):] == end_tag:
+    while text[-len(end_tag) :] == end_tag:
         text = text[: -len(end_tag)].strip()
     # Make them be list
-    text = '[' + text + ']'
+    text = "[" + text + "]"
 
     # Parse the JSON-formatted tool call
     try:
@@ -76,7 +76,7 @@ def tool_call_parse(text: str) -> list[ChatCompletionMessageToolCall]:
 
     # Check if the parsed data has the required structure for a function call
     if not isinstance(tool_call_data, list) or not all(
-        isinstance(tool_call, dict) and key in tool_call  
+        isinstance(tool_call, dict) and key in tool_call
         for key in ["name", "arguments"]
         for tool_call in tool_call_data
     ):
@@ -84,7 +84,8 @@ def tool_call_parse(text: str) -> list[ChatCompletionMessageToolCall]:
 
     try:
         # Create a Function object
-        functions = [Function(
+        functions = [
+            Function(
                 name=tool_call["name"],
                 arguments=json.dumps(tool_call["arguments"], ensure_ascii=False),
             )
@@ -92,11 +93,14 @@ def tool_call_parse(text: str) -> list[ChatCompletionMessageToolCall]:
         ]
 
         # Create and return a ChatCompletionMessageToolCall
-        return [ChatCompletionMessageToolCall(
-            id="tool_" + function.name + "_" + uuid.uuid4().hex[:8],
-            function=function,
-            type="function",
-        ) for function in functions]
+        return [
+            ChatCompletionMessageToolCall(
+                id="tool_" + function.name + "_" + uuid.uuid4().hex[:8],
+                function=function,
+                type="function",
+            )
+            for function in functions
+        ]
     except KeyError as e:
         raise ValueError("Invalid tool call format - missing required fields") from e
 
@@ -263,7 +267,7 @@ class HermesStreamProcessor(StreamProcessor):
                 ):
                     # Found tool_call tag first or only tool_call tag
                     output = self.buffer[:start_idx]
-                    self.buffer = self.buffer[start_idx + len(self.start_tag):]
+                    self.buffer = self.buffer[start_idx + len(self.start_tag) :]
                     self.in_tool_call = True
                     if output:
                         outputs.append(output)
@@ -306,14 +310,13 @@ class HermesStreamProcessor(StreamProcessor):
                     break
 
                 if end_idx != -1 or start_idx != -1:
-                    output = self.buffer[: output_idx]
+                    output = self.buffer[:output_idx]
                     self.buffer = self.buffer[output_idx_end:]
                     try:
                         outputs.extend(tool_call_parse(output))
                     except Exception:
                         # If parsing fails, treat as regular text
                         outputs.append(output)
-
 
                     if normal_close:
                         self.in_tool_call = False
