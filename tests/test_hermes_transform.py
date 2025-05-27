@@ -346,12 +346,33 @@ def test_transformation_class_default_behavior():
     assert result.content is not None and "get_weather" in result.content
 
 
+def test_multiple_tool_calls_normal():
+    processor = HermesStreamProcessor("<tool_call>", "</tool_call>")
+    text = """<tool_call>
+{"name": "tool_1", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
+</tool_call>
+<tool_call>
+{"name": "tool_2", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
+</tool_call>"""
+    outputs = []
+    for c in text:
+        outputs.extend(processor.process(c))
+    outputs.extend(processor.finalize())
+
+    tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
+    assert len(tool_calls) == 2  # noqa: PLR2004
+    assert tool_calls[0].function.name == "tool_1"
+    assert tool_calls[1].function.name == "tool_2"
+
+
 def test_multiple_tool_calls_unclosed_tag():
     processor = HermesStreamProcessor("<tool_call>", "</tool_call>")
     text = """<tool_call>
 {"name": "tool_1", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
 {"name": "tool_2", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}"""
-    outputs = processor.process(text)
+    outputs = []
+    for c in text:
+        outputs.extend(processor.process(c))
     outputs.extend(processor.finalize())
 
     tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
@@ -366,7 +387,9 @@ def test_multiple_tool_calls_closed_tag():
 {"name": "tool_1", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
 {"name": "tool_2", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
 </tool_call>"""
-    outputs = processor.process(text)
+    outputs = []
+    for c in text:
+        outputs.extend(processor.process(c))
     outputs.extend(processor.finalize())
 
     tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
@@ -382,7 +405,9 @@ def test_nested_tool_calls_closed_inner_tag():
 <tool_call>
 {"name": "tool_2", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
 </tool_call>"""
-    outputs = processor.process(text)
+    outputs = []
+    for c in text:
+        outputs.extend(processor.process(c))
     outputs.extend(processor.finalize())
 
     tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
@@ -399,7 +424,9 @@ def test_nested_tool_calls_unclosed_tags():
 {"name": "tool_2", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
 {"name": "tool_3", "arguments": {"location": "San Francisco, CA", "unit": "celsius"}}
 """
-    outputs = processor.process(text)
+    outputs = []
+    for c in text:
+        outputs.extend(processor.process(c))
     outputs.extend(processor.finalize())
 
     tool_calls = [o for o in outputs if isinstance(o, ChatCompletionMessageToolCall)]
